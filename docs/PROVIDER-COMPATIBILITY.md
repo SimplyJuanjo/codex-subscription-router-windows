@@ -18,8 +18,8 @@ With Python 3.11 or later, run from the repository (replace the example path
 with the actual config used by the official app):
 
 ```powershell
-python scripts/repair_provider_compatibility.py --config 'C:\Users\YOUR_USER\.codex\config.toml'
-python scripts/repair_provider_compatibility.py --config 'C:\Users\YOUR_USER\.codex\config.toml' --apply
+python scripts/repair_provider_compatibility.py --config "$env:USERPROFILE\.codex\config.toml"
+python scripts/repair_provider_compatibility.py --config "$env:USERPROFILE\.codex\config.toml" --apply
 ```
 
 The first command previews whether a repair is needed. The second preserves the
