@@ -858,6 +858,11 @@ function Test-DesktopAsarIntegrity {
     )
     $preservation = Get-JsonProperty -Object $Manifest -Name 'preservation'
     $declared = Get-JsonProperty -Object $preservation -Name 'desktopIntegrity'
+    if ((Get-JsonProperty -Object $Manifest -Name 'sourceVersion') -eq '26.903.8094.0') {
+        $expectedChrome = 'c2fb95027940a26eac4bd541a0cde66d0591af67e0f3c4efdb30e5ec6c98cd76'
+        $actualChrome = (Get-FileHash -LiteralPath (Join-Path $DestinationAppRoot 'chrome.dll') -Algorithm SHA256).Hash.ToLowerInvariant()
+        Add-Check -Name '26.903 original runtime and upstream fuse states are preserved' -Passed ($actualChrome -eq $expectedChrome -and $null -eq $declared) -Detail 'This source has no embedded ASAR resource; chrome.dll must match its reviewed original hash, without fuse edits'
+    }
     if ($null -eq $declared) { return }
     try {
         $python = Get-Command python -ErrorAction Stop
@@ -1360,6 +1365,24 @@ function Test-AsarArchive {
         # the native-host guard, or accept a partially upgraded payload.
         $isolationProfiles = @(
             @{
+                Name = '26.908'
+                Markers = @(
+                    'function GQ(e){return}',
+                    'function KQ(e){return}',
+                    'function iQ(e){if(process.platform===`win32`)return process.env.CODEX_MUX_HOME?[(0,i.join)(process.env.CODEX_MUX_HOME,_Z)]:[];',
+                    'case`win32`:return(0,i.join)(process.env.CODEX_MUX_HOME??(0,i.join)(process.env.LOCALAPPDATA??(0,i.join)(r.default.homedir(),`AppData`,`Local`),`Codex Subscription Router`),_Z);'
+                )
+            },
+            @{
+                Name = '26.903'
+                Markers = @(
+                    'function MZ(e){return}',
+                    'function NZ(e){return}',
+                    'function GX(e){if(process.platform===`win32`)return process.env.CODEX_MUX_HOME?[(0,i.join)(process.env.CODEX_MUX_HOME,iX)]:[];',
+                    'case`win32`:return(0,i.join)(process.env.CODEX_MUX_HOME??(0,i.join)(process.env.LOCALAPPDATA??(0,i.join)(r.default.homedir(),`AppData`,`Local`),`Codex Subscription Router`),iX);'
+                )
+            },
+            @{
                 Name = '26.820'
                 Markers = @(
                     'function oY(e){return}',
@@ -1395,6 +1418,12 @@ function Test-AsarArchive {
         }
 
         $activeOfficialAnchors = @(
+            'function GQ(e){if(process.platform!==`win32`)return;',
+            'function KQ(e){let t=e.manifestPath;process.platform!==`win32`',
+            'case`win32`:return Bb(`windows`).map',
+            'function MZ(e){if(process.platform!==`win32`)return;',
+            'function NZ(e){let t=e.manifestPath;process.platform!==`win32`',
+            'case`win32`:return Ob(`windows`).map',
             'function oY(e){if(process.platform!==`win32`)return;',
             'function sY(e){let t=e.manifestPath;process.platform!==`win32`',
             'case`win32`:return Fy(`windows`).map',

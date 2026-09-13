@@ -36,6 +36,7 @@ type RateLimits struct {
 }
 
 type AccountSnapshot struct {
+	observedAt      time.Time
 	ID              string          `json:"id"`
 	Label           string          `json:"label"`
 	Enabled         bool            `json:"enabled"`
@@ -69,8 +70,21 @@ func (m *Multiplexer) Accounts(ctx context.Context) []AccountSnapshot {
 	return m.accountSnapshots(ctx, true)
 }
 
-func (m *Multiplexer) accountSnapshots(ctx context.Context, includeProfile bool) []AccountSnapshot {
+func (m *Multiplexer) accountSnapshots(ctx context.Context, includeProfile bool, selected ...string) []AccountSnapshot {
 	accounts := m.store.Accounts()
+	if len(selected) > 0 && selected[0] != "" {
+		wanted := make(map[string]bool, len(selected))
+		for _, id := range selected {
+			wanted[id] = true
+		}
+		filtered := accounts[:0]
+		for _, account := range accounts {
+			if wanted[account.ID] {
+				filtered = append(filtered, account)
+			}
+		}
+		accounts = filtered
+	}
 	type indexedSnapshot struct {
 		index    int
 		snapshot AccountSnapshot
@@ -86,6 +100,7 @@ func (m *Multiplexer) accountSnapshots(ctx context.Context, includeProfile bool)
 			for index := range jobs {
 				account := accounts[index]
 				snapshot, err := m.accountSnapshotWithProfile(ctx, account.ID, includeProfile)
+				snapshot.observedAt = m.now()
 				if err != nil {
 					runtime := m.runtimeState(account.ID)
 					snapshot = AccountSnapshot{
@@ -155,6 +170,11 @@ func (m *Multiplexer) AddAccount(ctx context.Context, label string) (AccountSnap
 }
 
 func (m *Multiplexer) UpdateAccount(ctx context.Context, id string, label *string, enabled *bool) (AccountSnapshot, error) {
+	m.spendingMutationMu.Lock()
+	defer m.spendingMutationMu.Unlock()
+	if m.requestSpending && enabled != nil && !*enabled && m.RoutingMode().AccountID == id {
+		return AccountSnapshot{}, errors.New("choose Auto or another subscription before disabling the spending account")
+	}
 	previousMode := m.RoutingMode()
 	defer func() { m.publishRoutingModeChange(previousMode) }()
 	operation := m.childOperationLock(id)
@@ -193,6 +213,11 @@ func (m *Multiplexer) UpdateAccount(ctx context.Context, id string, label *strin
 }
 
 func (m *Multiplexer) DeleteAccount(ctx context.Context, id string) error {
+	m.spendingMutationMu.Lock()
+	defer m.spendingMutationMu.Unlock()
+	if m.requestSpending && m.RoutingMode().AccountID == id {
+		return errors.New("choose Auto or another subscription before deleting the spending account")
+	}
 	previousMode := m.RoutingMode()
 	defer func() { m.publishRoutingModeChange(previousMode) }()
 	operation := m.childOperationLock(id)
