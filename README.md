@@ -91,9 +91,9 @@ Codex Subscription Router currently targets:
 | Component | Supported value |
 | --- | --- |
 | Platform | Windows 10/11 x64 |
-| Official Store package | `26.903.8094.0` (also supports `26.901.6511.0` and `26.820.9563.0`) |
-| Current inner desktop version/build | `26.903.61454` / `8378` |
-| Current bundled Codex CLI | `0.153.4` |
+| Official Store package | `26.908.4834.0` (also supports `26.903.9818.0`, `26.903.8094.0`, `26.901.6511.0` and `26.820.9563.0`) |
+| Current inner desktop version/build | `26.908.40834` / `8881` |
+| Current bundled Codex CLI | `0.154.0-alpha.6.2` (as shipped by the official package) |
 | Go | 1.26 or newer |
 | Node.js | 22.12 or newer |
 | Python | 3.10 or newer |

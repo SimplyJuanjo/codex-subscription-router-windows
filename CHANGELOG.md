@@ -7,6 +7,17 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Support Windows Codex `26.908.4834.0` (inner `26.908.40834`, build `8881`,
+  bundled CLI `0.154.0-alpha.6.2`). Review exact source hashes and adapt runtime
+  isolation, native messaging and renderer bindings. Retain signed upstream
+  binaries, per-request spending, voice setup translation and auxiliary CUA.
+- Adapt the new asset-based profile menu while preserving its legacy icon API;
+  explicitly initialize the router's usage icon. Preserve the profile query
+  object for account refresh and adapt the redesigned reset sheet and thread
+  summary. Test native component exports and the packed expanded selector.
+- Keep Appshots explicitly opt-in on 26.908 without overriding the upstream
+  feature-availability decision or enabling an absent native bridge.
+
 - Preserve native `OpenAI-Alpha: quicksilver=v2` and voice session headers.
   Real backend A/B reproduced the previous 400 and verified 201 through the
   corrected gateway with a generated SDP offer, without microphone/audio.

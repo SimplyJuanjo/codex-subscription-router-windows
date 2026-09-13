@@ -4,15 +4,16 @@ import re
 import json
 
 
-def account_menu_item_alias(primary: str, updated: bool = False) -> str:
+def account_menu_item_alias(primary: str, updated: bool = False, modern: bool = False) -> str:
     # Bind to the component actually used by the native profile menu. Matching
     # an identifier elsewhere (for example text-xl CSS) can select an unrelated
     # object after minification and cause React error 130 when the menu opens.
-    matches = re.findall(
-        (r'\(0,xK\.jsx\)\(([A-Za-z_$][\w$]*),\{LeftIcon:oT,"aria-label":e,' if updated else r'\(0,dq\.jsx\)\(([A-Za-z_$][\w$]*),\{LeftIcon:CT,"aria-label":e,') +
-        r'className:`opacity-50`,disabled:n,onSelect:r,children:f\},`email`\)',
-        primary,
-    )
+    if modern:
+        pattern = (r'\(0,Gz\.jsx\)\(([A-Za-z_$][\w$]*),\{leftIconAsset:lE,"aria-label":e,'
+                   r'className:`opacity-50`,disabled:n,onSelect:r,children:p\},`email`\)')
+    else:
+        pattern = (r'\(0,xK\.jsx\)\(([A-Za-z_$][\w$]*),\{LeftIcon:oT,"aria-label":e,' if updated else r'\(0,dq\.jsx\)\(([A-Za-z_$][\w$]*),\{LeftIcon:CT,"aria-label":e,') + r'className:`opacity-50`,disabled:n,onSelect:r,children:f\},`email`\)'
+    matches = re.findall(pattern, primary)
     if len(matches) != 1:
         raise RuntimeError(f"expected one native profile menu item binding, found {len(matches)}")
     return matches[0]
@@ -21,7 +22,11 @@ def account_menu_item_alias(primary: str, updated: bool = False) -> str:
 def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
     assets = extracted / "webview" / "assets"
     root = Path(__file__).resolve().parent.parent
-    updated = json.loads((extracted / "package.json").read_text(encoding="utf-8"))["version"] == "26.903.71938"
+    version = json.loads((extracted / "package.json").read_text(encoding="utf-8"))["version"]
+    if version not in {"26.903.61454", "26.903.71938", "26.908.40834"}:
+        raise RuntimeError(f"unsupported split renderer version: {version}")
+    modern = version == "26.908.40834"
+    updated = version == "26.903.71938"
     stage = "primary"
     aliases = {
         "primary": {"dq":"xK", "Pyn":"Obn", "tG":"tfn", "fo":"Oe", "HE":"zb", "Zv":"Hv", "of":"Rd", "uB":"Qz", "MG":"iG", "kyn":"Cbn", "uq":"bK", "Rdn":"nfn", "Bdn":"ifn", "Adn":"qdn", "eG":"VW", "Eb":"bb"},
@@ -29,11 +34,31 @@ def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
         "profile": {"St":"xt", "xt":"bt", "M":"N"},
         "thread": {"ve":"s", "ds":"ps", "De":"y"},
     }
+    if modern:
+        aliases = {
+            "primary": {"dq":"Gz", "Pyn":"vGt", "tG":"NL", "fo":"Of", "HE":"o_", "Zv":"Dp", "of":"tS", "uB":"$N", "MG":"cR", "kyn":"pGt", "uq":"Wz", "Rdn":"_It", "Bdn":"yIt", "Adn":"lIt"},
+            "initial": {"vO":"DS", "x5i":"iji", "lq":"cG", "dz":"KD", "sb":"fm", "C5i":"oji", "S5i":"aji", "nD":"Qx", "gb":"xm", "w5i":"sji", "fb":"_m", "eD":"Xx", "T5i":"cji", "s8i":"Wki", "yb":"wm"},
+            "thread": {"iE":"nO", "sE":"aO", "ve":"vi", "ds":"S", "De":"r", "cE":"oO"},
+        }
 
     def translate(value: str) -> str:
-        if not updated:
+        if not updated and not modern:
             return value
         value = re.sub(r'''`(?:\\.|[^`])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_$][\w$]*''', lambda m: aliases.get(stage, {}).get(m[0], m[0]), value)
+        if modern:
+            if stage == "primary":
+                for before, after in {
+                    "(0,Wz.c)(223)": "(0,Wz.c)(234)",
+                    "usageItems:wt": "usageItems:kt",
+                    "triggerButton:Ot": "triggerButton:Nt",
+                    "children:[F,null]": "children:[j,null]",
+                    "children:zt": "children:Gt",
+                }.items():
+                    value = value.replace(before, after)
+            if stage == "thread":
+                value = value.replace("children:[w,p,T,E,C,D]", "children:[T,p,E,D,w,O]")
+                value = value.replace("children:[w,p,T,E,(0,oO.jsx)(CodexMuxThreadSubscription,{}),C,D]", "children:[T,p,E,D,(0,oO.jsx)(CodexMuxThreadSubscription,{}),w,O]")
+            return value
         if stage == "thread":
             value = value.replace("onOpenSubagentsPanel:s}=e", "onOpenSubagentsPanel:c}=e")
             value = value.replace("children:[w,p,T,E,C,D]", "children:[T,m,E,D,w,O]")
@@ -78,8 +103,15 @@ def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
     component = (root / "ui" / "account-menu.js").read_text(encoding="utf-8")
     component = component.replace("__CODEX_MUX_CONTROL_PORT__", str(control_port)).replace("__CODEX_MUX_CONTROL_TOKEN__", token)
     component = remap(component, {"e7": "dq", "kXc": "Pyn", "QLs": "tG", "Lo": "fo",
-                                 "Q": "HE", "BW": "Zv", "_H": account_menu_item_alias(primary, updated), "CH": "of",
+                                 "Q": "HE", "BW": "Zv", "_H": account_menu_item_alias(primary, updated, modern), "CH": "of",
                                  "jLa": "uB", "S2": "MG"})
+    if modern:
+        # The native menu now uses icon assets and no longer initializes the
+        # legacy usage SVG. Initialize its reviewed lazy module before rendering.
+        if primary.count('lR=t((()=>{i(),sR=Q(),cR=e=>') != 1:
+            raise RuntimeError("expected one native usage-icon initializer")
+        component = replace(component, "function CodexMuxAccountMenu() {",
+                            "function CodexMuxAccountMenu() {\n  lR();")
     for old, new in {"list-apps": "app/list", "list-installed-apps": "app/installed",
                      "read-apps": "app/read", "list-mcp-server-status": "mcpServerStatus/list",
                      "login-mcp-server": "mcpServer/oauth/login"}.items():
@@ -98,8 +130,12 @@ def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
     anchor = "let v=_,y;return t[13]!==n||t[14]!==d||t[15]!==g||t[16]!==v||t[17]!==r||t[18]!==m?(y=(0,Bdn.jsx)(Adn,{defaultResetCreditsOpen:n,errorMessage:d,initialAvailableCount:r,isResetting:m,onClose:g,onResetCredit:v}),t[13]=n,t[14]=d,t[15]=g,t[16]=v,t[17]=r,t[18]=m,t[19]=y):y=t[19],y}"
     primary = replace(primary, anchor, "let v=_;return (0,Bdn.jsx)(Adn,{defaultResetCreditsOpen:n,errorMessage:d,initialAvailableCount:r,isResetting:m,onClose:g,onResetCredit:v})}")
     primary = replace(primary, "let y=v;if(g!=null){", "let y=window.__codexMuxSelectedUsageWindows??v;if(g!=null){")
-    anchor = "let ge;t[46]===me?ge=t[47]:(ge=(0,eG.jsxs)(Eb,{children:[me,he]}),t[46]=me,t[47]=ge);"
-    primary = replace(primary, anchor, "let ge=(0,eG.jsxs)(Eb,{children:[me,he,window.__codexMuxResetAccountSelector??null]});")
+    if modern:
+        anchor = 'let _e=I.length===2?`h-[140px]`:`h-[70px]`,ve;'
+        primary = replace(primary, anchor, 'ge=(0,ML.jsxs)(ML.Fragment,{children:[ge,window.__codexMuxResetAccountSelector??null]});' + anchor)
+    else:
+        anchor = "let ge;t[46]===me?ge=t[47]:(ge=(0,eG.jsxs)(Eb,{children:[me,he]}),t[46]=me,t[47]=ge);"
+        primary = replace(primary, anchor, "let ge=(0,eG.jsxs)(Eb,{children:[me,he,window.__codexMuxResetAccountSelector??null]});")
     for message in ("You’re out of Codex and Work usage", "You’ve used all Codex and Work usage", "You’ve reached your usage limit"):
         primary = replace(primary, f"defaultMessage:`{message}`", "defaultMessage:`All connected subscriptions are depleted`")
     primary_path.write_text(primary, encoding="utf-8")
@@ -119,8 +155,14 @@ def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
     stage = "profile"
     profile_path = one("profile-*.js", "className:`flex flex-col items-center`")
     profile = profile_path.read_text(encoding="utf-8")
-    anchor = 'let St;t[91]!==yt||t[92]!==xt?(St=(0,$.jsx)(`section`,{"aria-busy":yt,className:`flex flex-col items-center`,children:xt}),t[91]=yt,t[92]=xt,t[93]=St):St=t[93];'
-    profile = replace(profile, anchor, anchor.replace("children:xt", "children:globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>M.refetch()})??xt"))
+    if modern:
+        # Preserve the query object, not the destructured profile data or user ID.
+        profile = replace(profile, 'O=r&&E,{data:k}=h(),', 'O=r&&E,codexMuxProfileQuery=h(),{data:k}=codexMuxProfileQuery,')
+        anchor = 'let dn;t[126]!==ln||t[127]!==un?(dn=(0,$.jsx)(`section`,{"aria-busy":ln,className:`flex flex-col items-center`,children:un}),t[126]=ln,t[127]=un,t[128]=dn):dn=t[128];'
+        profile = replace(profile, anchor, 'let dn=(0,$.jsx)(`section`,{"aria-busy":ln,className:`flex flex-col items-center`,children:globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>codexMuxProfileQuery.refetch()})??un});')
+    else:
+        anchor = 'let St;t[91]!==yt||t[92]!==xt?(St=(0,$.jsx)(`section`,{"aria-busy":yt,className:`flex flex-col items-center`,children:xt}),t[91]=yt,t[92]=xt,t[93]=St):St=t[93];'
+        profile = replace(profile, anchor, anchor.replace("children:xt", "children:globalThis.CodexMuxProfileAvatarStack?.({onSelect:()=>M.refetch()})??xt"))
     profile_path.write_text(profile, encoding="utf-8")
     stage = "plugins"
     plugin_path = one("plugins-settings-*.js", "action:F,children:w})")

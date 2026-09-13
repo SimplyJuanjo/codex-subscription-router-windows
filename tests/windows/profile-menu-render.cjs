@@ -12,7 +12,29 @@ async function main() {
   const primary = asar.extractFile(archive, primaryPath.replace(/^\//, '').split('/').join(path.sep)).toString();
   const initial = asar.extractFile(archive, initialPath.replace(/^\//, '').split('/').join(path.sep)).toString();
   const updated = primary.includes('function Cbn(e){');
-  if (updated) {
+  const modern = primary.includes('function pGt(e){');
+  if (modern) {
+    assert.match(primary, /cX as kg[,}]/);
+    const exported = initial.match(/([\w$]+) as cX[,}]/);
+    assert.ok(exported, 'native menu component export is present');
+    assert.ok(initial.includes(`function ${exported[1]}(e)`), 'menu binding resolves to a function');
+    assert.match(primary, /Gz\.jsx\)\(kg,\{leftIconAsset:lE/);
+    assert.match(initial, /LeftIcon:n,leftIconAsset:f/); // Legacy icon prop remains supported.
+    assert.match(primary, /function CodexMuxAccountMenu\(\) \{\s+lR\(\);/);
+    assert.match(primary, /ge=\(0,ML\.jsxs\)\(ML.Fragment,\{children:\[ge,window.__codexMuxResetAccountSelector\?\?null\]\}\)/);
+    const profilePath = entries.find(p => /\/profile-[a-f0-9]+\.js$/.test(p));
+    const profile = asar.extractFile(archive, profilePath.slice(1).split('/').join(path.sep)).toString();
+    assert.match(profile, /codexMuxProfileQuery=h\(\),\{data:k\}=codexMuxProfileQuery/);
+    assert.match(profile, /onSelect:\(\)=>codexMuxProfileQuery\.refetch\(\)/);
+    const threadPath = entries.find(p => /\/local-conversation-thread-[a-f0-9]+\.js$/.test(p) &&
+      asar.extractFile(archive, p.slice(1).split('/').join(path.sep)).toString().includes('const CODEX_MUX_THREAD_API ='));
+    assert.ok(threadPath, 'thread subscription component was injected');
+    const thread = asar.extractFile(archive, threadPath.slice(1).split('/').join(path.sep)).toString();
+    assert.match(thread, /import\{t as r\}from"\.\/react-/);
+    assert.match(thread, /const CodexMuxThreadReact=r\(\);/);
+    assert.match(thread, /const route = vi\(S\);/);
+    assert.match(thread, /children:\[T,p,E,D,\(0,oO.jsx\)\(CodexMuxThreadSubscription,\{\}\),w,O\]/);
+  } else if (updated) {
     assert.match(primary, /YG as Zy[,}]/);
     const exported = initial.match(/([\w$]+) as YG[,}]/);
     assert.ok(exported, 'native menu component export is present');
@@ -28,7 +50,7 @@ async function main() {
   assert.match(primary, /dq\.jsx\)\(Qy,\{LeftIcon:CT/); // Native menu uses Qy.
   }
   const start = primary.indexOf('const CODEX_MUX_API =');
-  const end = primary.indexOf(updated ? 'function Cbn(e)' : 'function kyn(e)', start);
+  const end = primary.indexOf(modern ? 'function pGt(e)' : updated ? 'function Cbn(e)' : 'function kyn(e)', start);
   assert.ok(start >= 0 && end > start);
   const injected = primary.slice(start, end);
   function render(code, expanded = false) {
@@ -46,13 +68,14 @@ async function main() {
       Pyn:{useState:initial=>{const n=index++;if(!(n in values))values[n]=typeof initial==='function'?initial():initial;return [values[n],()=>{}];},useCallback:f=>f,useEffect:()=>{}}
     };
     if (updated) Object.assign(globals, {xK:globals.dq, Obn:globals.Pyn, Hv:globals.Zv, Oe:globals.fo, zb:globals.HE, iG:globals.MG, Zy:globals.Qy, Rd:globals.of});
+    if (modern) Object.assign(globals, {Gz:globals.dq, vGt:globals.Pyn, Dp:globals.Zv, Of:globals.fo, o_:globals.HE, lR:()=>{}, cR:globals.MG, kg:globals.Qy, tS:globals.of});
     const c = vm.createContext(globals);
     vm.runInContext(code,c);
     return c.CodexMuxAccountMenu();
   }
   assert.doesNotThrow(()=>render(injected));
   assert.doesNotThrow(()=>render(injected, true));
-  assert.throws(()=>render(injected.replace(updated ? /\bZy\b/g : /\bQy\b/g,'xl')), /Invalid React element type: object/);
+  assert.throws(()=>render(injected.replace(modern ? /\bkg\b/g : updated ? /\bZy\b/g : /\bQy\b/g,'xl')), /Invalid React element type: object/);
   console.log('PASS: installed account menu and expanded routing selector accept native component bindings.');
   console.log('PASS: negative control reproduces React invalid-element-type with the old keybinding alias.');
 }

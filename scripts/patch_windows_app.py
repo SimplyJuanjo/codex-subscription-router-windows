@@ -48,6 +48,19 @@ DEFAULT_STATE_ROOT = (
 # version/build are recorded separately because OpenAI currently ships them at
 # different version numbers.
 TESTED_SOURCE_BUILDS: dict[str, dict[str, str]] = {
+    "26.908.4834.0": {
+        "asar_version": "26.908.40834",
+        "asar_build": "8881",
+        "asar_sha256": "2bd5b96a48232f3ccf3df6be50965920699ea3a1b4512dcdd770e209fd1f009e",
+        "codex_sha256": "081e4de4be8e38fac6ed4d95e3b1a0b9f6d31c090ddc36e1696b349fe406f575",
+        "chatgpt_sha256": "ca98461fd573f8b9912f48080b0f40f3b44788d1074493f4285e68169503fc23",
+        "codex_launcher_sha256": "a682a539b0c7e3fcbc8c7d5a0a1c15904ec3c74a2a747e518c889c03ecaa8387",
+        "windows_account_sha256": "c87c027b22d57882025875c4a9331631f8f4286175d121ac4666a75352947b53",
+        "cua_tree_sha256": "da1253ef9634a6595a7612c60f459617db6b33857650b2d3a9ca3fb58e367892",
+        "cua_node_version": "24.20.0",
+        "cua_runtime_version": "0.0.11/20260909002225-0b90dbee8d2e",
+        "cua_package_version": "0.2.4",
+    },
     "26.903.9818.0": {
         "asar_version": "26.903.71938",
         "asar_build": "8576",
@@ -910,6 +923,11 @@ def _is_26903(extracted: Path) -> bool:
     return package.is_file() and json.loads(package.read_text(encoding="utf-8")).get("version") in {"26.903.61454", "26.903.71938"}
 
 
+def _is_26908(extracted: Path) -> bool:
+    package = extracted / "package.json"
+    return package.is_file() and json.loads(package.read_text(encoding="utf-8")).get("version") == "26.908.40834"
+
+
 def _native_anchor(extracted: Path, value: str) -> str:
     if not _is_split_renderer(extracted):
         return value
@@ -918,6 +936,9 @@ def _native_anchor(extracted: Path, value: str) -> str:
     if _is_26903(extracted):
         mapping = {"oY": "MZ", "sY": "NZ", "jq": "rX", "Oq": "eX",
                    "Fy": "Ob", "yJ": "GX", "bJ": "KX", "Mq": "iX"}
+    if _is_26908(extracted):
+        mapping = {"oY": "GQ", "sY": "KQ", "jq": "gZ", "Oq": "pZ",
+                   "Fy": "Bb", "yJ": "iQ", "bJ": "aQ", "Mq": "_Z"}
     return re.sub(r"[A-Za-z_$][\w$]*", lambda m: mapping.get(m[0], m[0]), value)
 
 
@@ -931,6 +952,8 @@ def patch_windows_runtime_paths(extracted: Path) -> None:
     runtime_name = "yL" if _is_split_renderer(extracted) else "fF"
     if _is_26903(extracted):
         runtime_name = "uL"
+    if _is_26908(extracted):
+        runtime_name = "kL"
     runtime_anchor = runtime_anchor.replace("function fF(", f"function {runtime_name}(")
     matches = [path for path in source_files if runtime_anchor in path.read_text(encoding="utf-8")]
     if len(matches) != 1:
@@ -1113,6 +1136,11 @@ def patch_windows_appshots_gate(extracted: Path) -> None:
     if _is_26903(extracted):
         bridge_anchor = bridge_anchor.replace("a.a.", "a.i.").replace("SIe", "RIe").replace("dIe", "DIe")
         bridge_replacement = bridge_replacement.replace("a.a.", "a.i.").replace("SIe", "RIe").replace("dIe", "DIe")
+    if _is_26908(extracted):
+        # Upstream removed its internal-only gate. Retain our explicit opt-in
+        # without overriding upstream feature availability or managed policy.
+        bridge_anchor = "ie=y?g4e(g):null,U=new a4e"
+        bridge_replacement = 'ie=y&&process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1"?g4e(g):null,U=new a4e'
     text = replace_unique(
         text,
         bridge_anchor,
@@ -1135,6 +1163,9 @@ def patch_windows_appshots_gate(extracted: Path) -> None:
     if _is_26903(extracted):
         feature_anchor = feature_anchor.replace("Or(e)", "pr(e)").replace("I&&", "P&&").replace("a.a.", "a.i.")
         feature_replacement = feature_replacement.replace("Or(e)", "pr(e)").replace("I&&", "P&&").replace("a.a.", "a.i.")
+    if _is_26908(extracted):
+        feature_anchor = "F&&K.windowsCaptureNativeBridge==null&&(a.appshotsEnabled=!1),Ie.setDesktopFeatureAvailability(a);"
+        feature_replacement = 'F&&(!(process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1")||K.windowsCaptureNativeBridge==null)&&(a.appshotsEnabled=!1),Ie.setDesktopFeatureAvailability(a);'
     text = replace_unique(
         text,
         feature_anchor,
@@ -1166,6 +1197,9 @@ def verify_windows_appshots_contract(extracted: Path) -> dict[str, object]:
                     "o.appshotsEnabled=B.windowsCaptureNativeBridge!=null")
     if _is_26903(extracted):
         required = tuple(marker.replace("a.a.", "a.i.") for marker in required)
+    if _is_26908(extracted):
+        required = ('ie=y&&' + strict_gate + '?g4e(g):null',
+                    'F&&(!(' + strict_gate + ')||K.windowsCaptureNativeBridge==null)&&(a.appshotsEnabled=!1)')
     for marker in required:
         if marker not in text:
             raise RuntimeError(f"Appshots opt-in contract is missing {marker!r}")
@@ -1214,7 +1248,7 @@ def _prepare_account_component(token: str, control_port: int) -> str:
 def patch_windows_renderer(extracted: Path, token: str, control_port: int) -> None:
     if _is_split_renderer(extracted):
         import importlib.util
-        renderer_module = "windows_renderer_26903" if _is_26903(extracted) else "windows_renderer_26901"
+        renderer_module = "windows_renderer_26903" if _is_26903(extracted) or _is_26908(extracted) else "windows_renderer_26901"
         spec = importlib.util.spec_from_file_location(
             renderer_module, PROJECT_ROOT / "scripts" / f"{renderer_module}.py"
         )
@@ -1529,6 +1563,7 @@ def rebind_desktop_integrity(staged_app: Path, source_app: Path) -> dict[str, ob
         # 26.903.9818.0: valid upstream signatures, no INTEGRITY resource,
         # unchanged upstream fuse wire 0109313031313030303131.
         "49e7e8f5db0a4c8a12a666b70dac40e0e88a1873d02e8aafb82c3e8cabeca49c": "633aa9957e5f0fdad1765be82afea60c414714b8c4ca72143ee9e064951f14f8",
+        "ca98461fd573f8b9912f48080b0f40f3b44788d1074493f4285e68169503fc23": "eff6dbe82270819bc196360ee616cb6c324544dd8266dec46ac8e25d330d60db",
     }
     desktop_hash = sha256_file(source_app / "ChatGPT.exe")
     if desktop_hash in signed_runtimes:
@@ -1536,7 +1571,7 @@ def rebind_desktop_integrity(staged_app: Path, source_app: Path) -> dict[str, ob
         if (sha256_file(source_app / "chrome.dll") != chrome_hash or
                 sha256_file(staged_app / "chrome.dll") != chrome_hash or
                 sha256_file(staged_app / "ChatGPT.real.exe") != desktop_hash):
-            raise RuntimeError("26.903 signed runtime must remain byte-for-byte unchanged")
+            raise RuntimeError("approved signed runtime must remain byte-for-byte unchanged")
         return None
     """Preserve signed provenance and update only Electron's expected ASAR hash."""
     import importlib.util
@@ -1808,7 +1843,7 @@ def patch_app(
             tree_file_hashes(staged_app / "resources" / "app.asar.unpacked").keys()
         )
         unpacked = repack_asar(asar, extracted, repacked, official_unpacked_files)
-        if source.asar_version in {"26.903.61454", "26.903.71938"}:
+        if source.asar_version in {"26.903.61454", "26.903.71938", "26.908.40834"}:
             node = shutil.which("node")
             if node is None:
                 raise RuntimeError("Node.js is required to verify native profile menu bindings")
