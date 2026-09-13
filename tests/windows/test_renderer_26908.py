@@ -3,9 +3,8 @@ import json
 from pathlib import Path
 import sys
 import tempfile
-import unittest
+import unittest.mock
 from types import SimpleNamespace
-from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts"))
@@ -42,9 +41,9 @@ class Renderer26908Tests(unittest.TestCase):
     def test_signed_runtime_is_not_rebound(self):
         desktop = patcher.TESTED_SOURCE_BUILDS["26.908.4834.0"]["chatgpt_sha256"]
         chrome = "eff6dbe82270819bc196360ee616cb6c324544dd8266dec46ac8e25d330d60db"
-        with mock.patch.object(patcher, "sha256_file", side_effect=[desktop, chrome, chrome, desktop]):
+        with unittest.mock.patch.object(patcher, "sha256_file", side_effect=[desktop, chrome, chrome, desktop]):
             self.assertIsNone(patcher.rebind_desktop_integrity(Path("stage"), Path("source")))
-        with mock.patch.object(patcher, "sha256_file", side_effect=[desktop, chrome, "changed"]):
+        with unittest.mock.patch.object(patcher, "sha256_file", side_effect=[desktop, chrome, "changed"]):
             with self.assertRaisesRegex(RuntimeError, "byte-for-byte"):
                 patcher.rebind_desktop_integrity(Path("stage"), Path("source"))
 

@@ -27,6 +27,7 @@ def main():
                 try:
                     responses.put(json.loads(line))
                 except ValueError:
+                    # Native startup diagnostics are not JSON-RPC responses.
                     pass
             responses.put(None)
 

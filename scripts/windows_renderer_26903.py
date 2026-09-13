@@ -44,7 +44,7 @@ def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
     def translate(value: str) -> str:
         if not updated and not modern:
             return value
-        value = re.sub(r'''`(?:\\.|[^`])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_$][\w$]*''', lambda m: aliases.get(stage, {}).get(m[0], m[0]), value)
+        value = re.sub(r'''`(?:\\.|[^`\\])*`|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[A-Za-z_$][\w$]*''', lambda m: aliases.get(stage, {}).get(m[0], m[0]), value)
         if modern:
             if stage == "primary":
                 for before, after in {
