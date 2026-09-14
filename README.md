@@ -177,7 +177,18 @@ starts another sign-in.
 | Every account depleted | Combined quota alert with the next known reset |
 | Account disabled | Excluded from routing and pooled usable quota |
 
-The subscription assigned to the current thread appears in its pinned summary.
+History ownership is independent of per-request spending. The task's
+**Environment → Subscription** section shows **Last request**: the subscription
+that accepted its latest routed request, not the account that owns the history.
+It updates during streaming and when Auto chooses another subscription. Changing
+the selected mode alone does not change this observation.
+
+The last observed identity survives restarts in private, per-task
+`thread-spending` sidecars (no prompts or credentials). Tasks without evidence
+show **No routed request recorded**, never a guessed Primary account. Rejected
+or unsent requests do not replace the observation; accepted requests may later
+fail or be interrupted. This identifies the upstream subscription, not an exact
+token charge. Other tasks and subagents retain their own attribution.
 
 ### Choose which subscription to use
 

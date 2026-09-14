@@ -45,6 +45,7 @@ func New(address, token string, multiplexer *mux.Multiplexer, uiTests bool) *Ser
 	})
 	router.HandleFunc("/v1/accounts/", server.accountAction)
 	router.HandleFunc("/v1/thread-account", server.threadAccount)
+	router.HandleFunc("/v1/thread-spending", server.threadSpending)
 	router.HandleFunc("/v1/profile/combined", server.combinedProfile)
 	router.HandleFunc("/v1/events", server.events)
 	if uiTests {

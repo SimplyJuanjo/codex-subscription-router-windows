@@ -19,6 +19,17 @@ def account_menu_item_alias(primary: str, updated: bool = False, modern: bool = 
     return matches[0]
 
 
+def usage_modal_opener_alias(primary: str, modal: str) -> str:
+    # Follow the native usage button, not a historical minified alias. In
+    # 26.908 the former alias now logs product analytics without opening UI.
+    pattern = (r'([A-Za-z_$][\w$]*)\([A-Za-z_$][\w$]*,' + re.escape(modal) +
+               r',\{defaultResetCreditsOpen:!0,initialAvailableCount:')
+    matches = re.findall(pattern, primary)
+    if len(matches) != 1:
+        raise RuntimeError(f"expected one native usage modal opener, found {len(matches)}")
+    return matches[0]
+
+
 def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
     assets = extracted / "webview" / "assets"
     root = Path(__file__).resolve().parent.parent
@@ -103,7 +114,7 @@ def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
     component = (root / "ui" / "account-menu.js").read_text(encoding="utf-8")
     component = component.replace("__CODEX_MUX_CONTROL_PORT__", str(control_port)).replace("__CODEX_MUX_CONTROL_TOKEN__", token)
     component = remap(component, {"e7": "dq", "kXc": "Pyn", "QLs": "tG", "Lo": "fo",
-                                 "Q": "HE", "BW": "Zv", "_H": account_menu_item_alias(primary, updated, modern), "CH": "of",
+                                 "Q": "HE", "BW": usage_modal_opener_alias(primary, translate("tG")), "_H": account_menu_item_alias(primary, updated, modern), "CH": "of",
                                  "jLa": "uB", "S2": "MG"})
     if modern:
         # The native menu now uses icon assets and no longer initializes the
@@ -112,6 +123,10 @@ def patch_renderer(extracted: Path, token: str, control_port: int) -> None:
             raise RuntimeError("expected one native usage-icon initializer")
         component = replace(component, "function CodexMuxAccountMenu() {",
                             "function CodexMuxAccountMenu() {\n  lR();")
+        if primary.count('var _It,vIt,yIt,PL=t((()=>{') != 1:
+            raise RuntimeError("expected one native usage-modal initializer")
+        component = replace(component, "function CodexMuxUsageModal({\n  onClose,\n}) {",
+                            "function CodexMuxUsageModal({\n  onClose,\n}) {\n  PL();")
     for old, new in {"list-apps": "app/list", "list-installed-apps": "app/installed",
                      "read-apps": "app/read", "list-mcp-server-status": "mcpServerStatus/list",
                      "login-mcp-server": "mcpServer/oauth/login"}.items():

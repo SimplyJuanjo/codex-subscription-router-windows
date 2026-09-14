@@ -29,6 +29,9 @@ type Gateway struct {
 	RoundTrip http.RoundTripper
 	Upstream  *url.URL
 	Observe   func(Record)
+	// Accepted fires once after upstream accepts the selected identity, before
+	// reading its body. Observe still reports the terminal outcome separately.
+	Accepted func(Record)
 }
 
 type Credentials struct{ Bearer, AccountID string }
@@ -177,6 +180,11 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// error bodies, which may echo sensitive request data or credentials.
 		gatewayError(w, 502, fmt.Sprintf("selected subscription returned HTTP %d; no automatic retry", response.StatusCode))
 		return
+	}
+	if g.Accepted != nil {
+		accepted := record
+		accepted.Outcome = "accepted"
+		g.Accepted(accepted)
 	}
 	w.Header().Set("Content-Type", response.Header.Get("Content-Type"))
 	w.Header().Set("X-Router-Account", decision.AccountID)

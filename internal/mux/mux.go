@@ -139,6 +139,9 @@ type Multiplexer struct {
 	spendCacheMode     string
 	spendRecordsMu     sync.Mutex
 	spendRecords       []spend.Record
+	threadSpendMu      sync.Mutex
+	threadSpending     map[string]state.ThreadSpend
+	threadSpendUnsaved map[string]bool
 }
 
 type threadLock struct {

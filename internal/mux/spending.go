@@ -40,7 +40,7 @@ func (m *Multiplexer) startSpendGateway() error {
 	transport.ResponseHeaderTimeout = spendResponseHeaderTimeout
 	transport.MaxConnsPerHost = 32
 	transport.MaxIdleConnsPerHost = 16
-	g := &spend.Gateway{Policy: m.spendPolicy, Token: m.spendToken, Upstream: u, RoundTrip: transport, Candidates: m.spendCandidates, Credentials: m.spendCredentials, Observe: m.recordSpend}
+	g := &spend.Gateway{Policy: m.spendPolicy, Token: m.spendToken, Upstream: u, RoundTrip: transport, Candidates: m.spendCandidates, Credentials: m.spendCredentials, Observe: m.recordSpend, Accepted: m.acceptThreadSpend}
 	if m.spendTransport != nil {
 		g.RoundTrip = m.spendTransport
 	}
