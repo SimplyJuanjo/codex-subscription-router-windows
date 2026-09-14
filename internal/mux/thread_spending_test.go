@@ -78,7 +78,13 @@ func TestThreadSpendingTracksRequestNotOwnerModeOrCompletionOrder(t *testing.T) 
 func TestThreadSpendingSurvivesRestartAndSequenceReset(t *testing.T) {
 	m, second := threadSpendingFixture(t)
 	m.acceptThreadSpend(acceptedSpend("task", second.ID, 500))
-	s, err := state.Open(m.store.Root(), filepath.Join(filepath.Dir(m.store.Root()), "primary"))
+	primary, ok := m.store.Account("primary")
+	if !ok {
+		t.Fatal("fixture primary account is missing")
+	}
+	// Reuse the configured home, not a path derived from the canonical state
+	// root: Windows 8.3 aliases and macOS /var can have different spellings.
+	s, err := state.Open(m.store.Root(), primary.CodexHome)
 	if err != nil {
 		t.Fatal(err)
 	}
