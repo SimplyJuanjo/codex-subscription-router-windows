@@ -18,6 +18,13 @@ class Renderer26908Tests(unittest.TestCase):
     def test_native_component_binding(self):
         self.assertEqual(renderer.account_menu_item_alias(self.NATIVE, modern=True), "kg")
 
+    def test_usage_opener_follows_native_button_not_analytics_alias(self):
+        native = 'c(!1),ud(i,NL,{defaultResetCreditsOpen:!0,initialAvailableCount:Le,isRateLimitReached:!1})'
+        self.assertEqual(renderer.usage_modal_opener_alias(native, "NL"), "ud")
+        for invalid in (native * 2, native.replace("NL", "OtherModal"), "Dp(scope,callback,{})"):
+            with self.assertRaises(RuntimeError):
+                renderer.usage_modal_opener_alias(invalid, "NL")
+
     def test_ambiguous_or_old_binding_rejected(self):
         for text in (self.NATIVE * 2, "const kg = {};", self.NATIVE.replace("leftIconAsset", "LeftIcon")):
             with self.assertRaises(RuntimeError):

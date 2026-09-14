@@ -7,6 +7,15 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Replace unsupported Electron `window.prompt` renaming with an inline editor
+  supporting Save, Cancel, validation, errors and duplicate-submit protection.
+- Resolve the usage/reset modal opener from the native profile button instead
+  of the stale 26.908 analytics alias. Initialize its native module and refresh
+  subscription reset counts after redemption. Test actual packed click handlers
+  and native modal state, with account-scoped synthetic credits only.
+- Show the task's latest accepted inference subscription independently of its
+  history owner, including live Auto updates and private restart persistence.
+
 - Support Windows Codex `26.908.4834.0` (inner `26.908.40834`, build `8881`,
   bundled CLI `0.154.0-alpha.6.2`). Review exact source hashes and adapt runtime
   isolation, native messaging and renderer bindings. Retain signed upstream

@@ -32,6 +32,8 @@ func TestVoiceCallUsesSelectedSubscriptionAndBackendShape(t *testing.T) {
 	g.Policy.Set(Mode{AccountID: "second"})
 	var record Record
 	g.Observe = func(r Record) { record = r }
+	var accepted Record
+	g.Accepted = func(r Record) { accepted = r }
 	calls := 0
 	g.RoundTrip = transport(func(r *http.Request) (*http.Response, error) {
 		calls++
@@ -52,6 +54,9 @@ func TestVoiceCallUsesSelectedSubscriptionAndBackendShape(t *testing.T) {
 	})
 	w := httptest.NewRecorder()
 	g.ServeHTTP(w, voiceRequest(g))
+	if accepted.Outcome != "accepted" || accepted.ThreadID != "synthetic-thread" || accepted.AccountID != "second" {
+		t.Fatal(accepted)
+	}
 	if w.Code != 201 || w.Header().Get("Location") != "/v1/realtime/calls/rtc_test" || calls != 1 || record.Outcome != "voice-call-created" || record.AccountID != "second" {
 		t.Fatal(w, calls, record)
 	}

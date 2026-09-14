@@ -347,6 +347,8 @@ test("thread subscription uses the shared authenticated stream and closes it", (
   const context = vm.createContext({
     AbortController,
     CODEX_MUX_CONTROL_PORT: 49154,
+    K: { Section: "section" },
+    zE: { jsx: (type, props) => ({ type, props }) },
     TE: {
       useEffect: (effect) => {
         effectCleanup = effect();
@@ -378,7 +380,7 @@ test("thread subscription uses the shared authenticated stream and closes it", (
     filename: threadSubscriptionPath,
   });
 
-  assert.equal(context.CodexMuxThreadSubscription(), null);
+  assert.equal(context.CodexMuxThreadSubscription().props.title, "Subscription");
   assert.equal(fetchCount, 1);
   assert.equal(
     streamOptions.apiBase,
@@ -388,14 +390,14 @@ test("thread subscription uses the shared authenticated stream and closes it", (
 
   streamOptions.onMessage({
     data: JSON.stringify({
-      type: "thread-failed-over",
+      type: "inference-spent",
       data: { threadId: "another-thread" },
     }),
   });
   assert.equal(fetchCount, 1);
   streamOptions.onMessage({
     data: JSON.stringify({
-      type: "thread-failed-over",
+      type: "inference-spent",
       data: { threadId: "thread-7" },
     }),
   });

@@ -80,6 +80,11 @@ func (g *Gateway) createVoiceCall(w http.ResponseWriter, r *http.Request) {
 	}
 	started := time.Now()
 	record := Record{Outcome: "not-sent"}
+	// Only the native task ID is attribution evidence; session/parent IDs are
+	// not interchangeable with the task that opened this voice call.
+	if id := r.Header.Get("Thread-Id"); len(id) <= 64 {
+		record.ThreadID = id
+	}
 	defer func() {
 		record.DurationMillis = time.Since(started).Milliseconds()
 		if g.Observe != nil {
@@ -142,6 +147,11 @@ func (g *Gateway) createVoiceCall(w http.ResponseWriter, r *http.Request) {
 		record.Outcome = "upstream-rejected"
 		gatewayError(w, 502, fmt.Sprintf("voice subscription returned HTTP %d; not retried", response.StatusCode))
 		return
+	}
+	if g.Accepted != nil {
+		accepted := record
+		accepted.Outcome = "accepted"
+		g.Accepted(accepted)
 	}
 	sdp, err := io.ReadAll(io.LimitReader(response.Body, (1<<20)+1))
 	callID := voiceCallID(response.Header.Get("Location"))

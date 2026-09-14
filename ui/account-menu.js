@@ -374,7 +374,7 @@ async function codexMuxRateLimitResets(accountId) {
 }
 
 async function codexMuxConsumeRateLimitReset(accountId, input) {
-  return codexMuxRequest(
+  const result = await codexMuxRequest(
     `/accounts/${encodeURIComponent(accountId)}/rate-limit-resets/consume`,
     {
       method: "POST",
@@ -384,6 +384,11 @@ async function codexMuxConsumeRateLimitReset(accountId, input) {
       }),
     },
   );
+  if (result.code === "reset" || result.code === "already_redeemed") {
+    // Refresh selector counts too, not only the native selected-account query.
+    globalThis.__codexMuxRefreshResetAccounts?.();
+  }
+  return result;
 }
 
 function CodexMuxUsageModal({
@@ -406,9 +411,12 @@ function CodexMuxUseResetAccountState() {
   const [selectedId, setSelectedId] = kXc.useState("primary");
   const [resetCounts, setResetCounts] = kXc.useState({});
   const [loading, setLoading] = kXc.useState(cachedAccounts.length === 0);
+  const [requestState] = kXc.useState(() => ({ active: true, generation: 0 }));
 
   const loadAccounts = kXc.useCallback(async () => {
+    const generation = ++requestState.generation;
     const result = await codexMuxRequest("/accounts");
+    if (!requestState.active || generation !== requestState.generation) return;
     const connected = (result.accounts || []).filter(
       (account) => account.connected && account.enabled,
     );
@@ -429,11 +437,29 @@ function CodexMuxUseResetAccountState() {
         }
       }),
     );
-    setResetCounts(Object.fromEntries(entries));
+    if (requestState.active && generation === requestState.generation) {
+      setResetCounts(Object.fromEntries(entries));
+    }
   }, []);
 
   kXc.useEffect(() => {
-    loadAccounts().catch(() => setLoading(false));
+    requestState.active = true;
+    const refresh = () => {
+      void loadAccounts().catch(() => {
+        if (!requestState.active) return;
+        setLoading(false);
+        setResetCounts({});
+      });
+    };
+    globalThis.__codexMuxRefreshResetAccounts = refresh;
+    refresh();
+    return () => {
+      requestState.active = false;
+      requestState.generation++;
+      if (globalThis.__codexMuxRefreshResetAccounts === refresh) {
+        delete globalThis.__codexMuxRefreshResetAccounts;
+      }
+    };
   }, [loadAccounts]);
 
   kXc.useEffect(
@@ -560,6 +586,8 @@ function CodexMuxAccountMenu() {
   const [spending, setSpending] = kXc.useState({ enabled: false, records: [] });
   const [routingModeOpen, setRoutingModeOpen] = kXc.useState(false);
   const [routingRequestState] = kXc.useState(() => ({ revision: 0, saving: false, refreshPending: false }));
+  const [renameDraft, setRenameDraft] = kXc.useState(null);
+  const [actionRequestState] = kXc.useState(() => ({ busy: false }));
   const loginAccountId = login?.accountId || null;
 
   const refresh = kXc.useCallback(async () => {
@@ -704,7 +732,8 @@ function CodexMuxAccountMenu() {
   }
 
   async function runAccountAction(action, operation, successMessage) {
-    if (busy) return false;
+    if (busy || actionRequestState.busy) return false;
+    actionRequestState.busy = true;
     setBusy(action);
     setError("");
     setStatusMessage("");
@@ -717,6 +746,7 @@ function CodexMuxAccountMenu() {
       setError(requestError?.message || "The subscription action failed.");
       return false;
     } finally {
+      actionRequestState.busy = false;
       setBusy("");
     }
   }
@@ -769,22 +799,47 @@ function CodexMuxAccountMenu() {
     if (cancelled) clearPendingLogin();
   }
 
-  async function renameAccount(account, event) {
+  function renameAccount(account, event) {
     keepMenuOpen(event);
-    const proposed = window.prompt("Subscription name", account.label);
-    if (proposed == null) return;
+    if (busy) return;
+    setError("");
+    setStatusMessage("");
+    setRenameDraft({ accountId: account.id, label: account.label });
+  }
+
+  function cancelRename() {
+    if (busy) return;
+    setRenameDraft(null);
+    setError("");
+    document.querySelector('[data-codex-mux-action="rename"]')?.focus();
+  }
+
+  async function saveRename(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (busy || !renameDraft || renameDraft.accountId !== selectedAccount?.id) return;
+    const { accountId } = renameDraft;
     let label;
     try {
-      label = codexMuxValidateAccountLabel(proposed);
+      label = codexMuxValidateAccountLabel(renameDraft.label);
     } catch (validationError) {
       setError(validationError.message);
       return;
     }
-    await runAccountAction(
-      `rename:${account.id}`,
-      () => codexMuxPatchAccount(account.id, { label }),
+    const saved = await runAccountAction(
+      `rename:${accountId}`,
+      async () => {
+        await codexMuxPatchAccount(accountId, { label });
+        // The mutation is committed even if the subsequent quota refresh fails.
+        setAccounts((current) => current.map((account) =>
+          account.id === accountId ? { ...account, label } : account));
+      },
       `Renamed subscription to ${label}.`,
     );
+    if (saved) {
+      setRenameDraft(null);
+      document.querySelector('[data-codex-mux-action="rename"]')?.focus();
+    }
   }
 
   async function toggleAccount(account, event) {
@@ -884,7 +939,16 @@ function CodexMuxAccountMenu() {
               ? `${Math.round(totalRemaining)}%`
               : "–",
         }),
-        onSelect: () => BW(modalScope, CodexMuxUsageModal, {}),
+        "aria-label": "View usage and available resets",
+        "data-codex-mux-action": "usage",
+        onSelect: (event) => {
+          try {
+            BW(modalScope, CodexMuxUsageModal, {});
+          } catch {
+            keepMenuOpen(event);
+            setError("Usage could not be opened. Please reopen the profile menu and try again.");
+          }
+        },
         children: "Usage remaining",
       },
       "codex-mux-total",
@@ -966,6 +1030,8 @@ function CodexMuxAccountMenu() {
           rightIcon: (0, e7.jsx)("span", { "aria-hidden": true, children: checked ? "✓" : "" }),
           onSelect: (event) => {
             keepMenuOpen(event);
+            if (busy) return;
+            setRenameDraft(null);
             if (!option.disabled) void selectRoutingMode(option.mode === "auto"
               ? { mode: "auto" } : { mode: "account", accountId: option.accountId }, event);
           },
@@ -1024,6 +1090,8 @@ function CodexMuxAccountMenu() {
           "data-codex-mux-state": state.key,
           onSelect: (event) => {
             keepMenuOpen(event);
+            if (busy || actionRequestState.busy) return;
+            setRenameDraft(null);
             setSelectedAccountId((current) =>
               current === account.id ? null : account.id,
             );
@@ -1071,6 +1139,60 @@ function CodexMuxAccountMenu() {
         `codex-mux-rename-${selectedAccount.id}`,
       ),
     );
+    if (renameDraft?.accountId === selectedAccount.id) {
+      rows.push((0, e7.jsxs)("form", {
+        "aria-label": "Rename subscription",
+        "aria-busy": busy === `rename:${selectedAccount.id}`,
+        "data-codex-mux-action": "rename-form",
+        className: "mx-2 my-2 rounded-lg border border-token-border p-3",
+        onSubmit: saveRename,
+        // Keep the menu's typeahead/roving focus from eating text input.
+        onKeyDown: (event) => {
+          event.stopPropagation();
+          if (event.key === "Escape") {
+            event.preventDefault();
+            cancelRename();
+          }
+        },
+        onPointerMove: (event) => event.stopPropagation(),
+        children: [
+          (0, e7.jsx)("label", {
+            htmlFor: "codex-mux-subscription-name",
+            className: "mb-2 block text-sm",
+            children: "Subscription name",
+          }),
+          (0, e7.jsx)("input", {
+            id: "codex-mux-subscription-name",
+            name: "subscriptionName",
+            type: "text",
+            autoFocus: true,
+            autoComplete: "off",
+            maxLength: CODEX_MUX_ACCOUNT_LABEL_MAX_LENGTH,
+            disabled: busy !== "",
+            value: renameDraft.label,
+            "aria-invalid": error ? "true" : undefined,
+            className: "w-full rounded-md border border-token-border bg-token-bg-primary px-2 py-1 text-sm text-token-text-primary",
+            onFocus: (event) => event.currentTarget.select(),
+            onChange: (event) => setRenameDraft({ ...renameDraft, label: event.target.value }),
+          }),
+          (0, e7.jsxs)("div", {
+            className: "mt-2 flex justify-end gap-2",
+            children: [
+              (0, e7.jsx)("button", {
+                type: "button", disabled: busy !== "", onClick: cancelRename,
+                className: "rounded-md px-3 py-1 text-sm hover:bg-token-foreground/5",
+                children: "Cancel",
+              }),
+              (0, e7.jsx)("button", {
+                type: "submit", disabled: busy !== "",
+                className: "rounded-md bg-token-foreground/10 px-3 py-1 text-sm hover:bg-token-foreground/15",
+                children: busy === `rename:${selectedAccount.id}` ? "Saving…" : "Save",
+              }),
+            ],
+          }),
+        ],
+      }, `codex-mux-rename-form-${selectedAccount.id}`));
+    }
     if (selectedState.canLogin) {
       rows.push(
         (0, e7.jsx)(
