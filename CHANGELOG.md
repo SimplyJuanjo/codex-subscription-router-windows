@@ -7,6 +7,10 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Shorten the patcher staging directory prefix so copying the 26.908 payload
+  no longer exceeds `MAX_PATH` under the default destination when Windows long
+  paths are disabled. Record two open launcher-bypass issues in
+  `docs/FIELD-REPORT-LAUNCHER-BYPASS.md`.
 - Replace unsupported Electron `window.prompt` renaming with an inline editor
   supporting Save, Cancel, validation, errors and duplicate-submit protection.
 - Resolve the usage/reset modal opener from the native profile button instead
