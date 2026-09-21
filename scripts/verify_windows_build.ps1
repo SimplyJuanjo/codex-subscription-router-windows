@@ -1365,6 +1365,24 @@ function Test-AsarArchive {
         # the native-host guard, or accept a partially upgraded payload.
         $isolationProfiles = @(
             @{
+                Name = '26.915'
+                Markers = @(
+                    'function V2(e){return}',
+                    'function H2(e){return}',
+                    'function e2(e){if(process.platform===`win32`)return process.env.CODEX_MUX_HOME?[(0,s.join)(process.env.CODEX_MUX_HOME,p0)]:[];',
+                    'case`win32`:return(0,s.join)(process.env.CODEX_MUX_HOME??(0,s.join)(process.env.LOCALAPPDATA??(0,s.join)(o.default.homedir(),`AppData`,`Local`),`Codex Subscription Router`),p0);'
+                )
+            },
+            @{
+                Name = '26.911'
+                Markers = @(
+                    'function V$(e){return}',
+                    'function H$(e){return}',
+                    'function e$(e){if(process.platform===`win32`)return process.env.CODEX_MUX_HOME?[(0,s.join)(process.env.CODEX_MUX_HOME,pQ)]:[];',
+                    'case`win32`:return(0,s.join)(process.env.CODEX_MUX_HOME??(0,s.join)(process.env.LOCALAPPDATA??(0,s.join)(o.default.homedir(),`AppData`,`Local`),`Codex Subscription Router`),pQ);'
+                )
+            },
+            @{
                 Name = '26.908'
                 Markers = @(
                     'function GQ(e){return}',

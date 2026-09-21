@@ -48,6 +48,32 @@ DEFAULT_STATE_ROOT = (
 # version/build are recorded separately because OpenAI currently ships them at
 # different version numbers.
 TESTED_SOURCE_BUILDS: dict[str, dict[str, str]] = {
+    "26.915.4065.0": {
+        "asar_version": "26.915.31945",
+        "asar_build": "9922",
+        "asar_sha256": "b8aeb817cd1ee6ef50efe8a97985d3be41de89688a5addfe0a444e1e52348096",
+        "codex_sha256": "bc45017e8239dc150258f69309ced9df6bbcdf5b8e4f346decf780ac0999e226",
+        "chatgpt_sha256": "0d27aef4010466bd8d2a95f6483938cfdb8926f6668ecc1182facec9b85b75d2",
+        "codex_launcher_sha256": "3798b224dc945cfb4c79f1d78b8c4d1e4e7d03abd8a6db7dd8aad14d3dc9e3a8",
+        "windows_account_sha256": "6bab21ac99f0848514ec8d58e9601e84c766fd583225f2f83bec86aaa514870d",
+        "cua_tree_sha256": "4acc27c77290487692fac3887db988ee853ead31d6c12f2b38cc25653664b79d",
+        "cua_node_version": "24.21.0",
+        "cua_runtime_version": "0.0.16/20260915001755-492f19756c31",
+        "cua_package_version": "0.2.5",
+    },
+    "26.911.7940.0": {
+        "asar_version": "26.911.61220",
+        "asar_build": "9647",
+        "asar_sha256": "74e7aaf2c112f84ef68a7846d10d1411403e72763f7e93fe046df2f264adf6e0",
+        "codex_sha256": "be793ab45adbcbd9fa716df04cb6bc68eb9e353c6e6af20886af45c11abc2413",
+        "chatgpt_sha256": "f28e7d55de4ee465747e252741218bf5a58c33620d014598e01bddb9189abaca",
+        "codex_launcher_sha256": "b1f6e808343d63f67601367bde61afbfaf887102a8503ed49234a82ff74a77be",
+        "windows_account_sha256": "9bf42804bb9524a613d98f7e373613839933a4c846cfb5ca6e1a5e06900d1bd9",
+        "cua_tree_sha256": "336fd5a7af792ccaa406f8c307057dc64b90198fe75208be888056ffe8d98959",
+        "cua_node_version": "24.20.0",
+        "cua_runtime_version": "0.0.11/20260909002225-0b90dbee8d2e",
+        "cua_package_version": "0.2.4",
+    },
     "26.908.4834.0": {
         "asar_version": "26.908.40834",
         "asar_build": "8881",
@@ -881,7 +907,13 @@ def patch_windows_bootstrap(extracted: Path) -> None:
         r"await (?P<manager>[A-Za-z_$][\w$]*)\.initialize\(\);"
         r"(?=let\{runMainAppStartup:)"
     )
-    text, count = updater_pattern.subn("", text, count=1)
+    if _is_26915(extracted):
+        text = replace_unique(text, "enableUpdater:j.shouldIncludeUpdater(d,process.platform,process.env)", "enableUpdater:!1", "26.915 copied updater policy")
+        text = replace_unique(text, "if(await i.initialize(),a&&c&&RA(),a||s){", "if(a&&c&&RA(),a||s){", "26.915 copied updater startup")
+        text = replace_unique(text, "await i.startUpdaterAfterStartupFailure(),await mj(e)", "await mj(e)", "26.915 copied updater recovery")
+        count = 1
+    else:
+        text, count = updater_pattern.subn("", text, count=1)
     if count != 1:
         raise RuntimeError("could not disable the copied app's automatic updater")
 
@@ -901,14 +933,18 @@ def patch_windows_bootstrap(extracted: Path) -> None:
         r"process\.platform===`win32`&&(?P<electron>[A-Za-z_$][\w$]*)\.app\."
         r"setAppUserModelId\([^;]+\)"
     )
-    text, count = app_id_pattern.subn(
-        lambda match: (
-            f"process.platform===`win32`&&{match.group('electron')}.app."
-            "setAppUserModelId(`com.openai.codex.subscription-router`)"
-        ),
-        text,
-        count=1,
-    )
+    if _is_26915(extracted):
+        text = replace_unique(text, "o.app.setAppUserModelId(Ut(_j))", "o.app.setAppUserModelId(`com.openai.codex.subscription-router`)", "26.915 AppUserModelID")
+        count = 1
+    else:
+        text, count = app_id_pattern.subn(
+            lambda match: (
+                f"process.platform===`win32`&&{match.group('electron')}.app."
+                "setAppUserModelId(`com.openai.codex.subscription-router`)"
+            ),
+            text,
+            count=1,
+        )
     if count != 1:
         raise RuntimeError("could not isolate the copied app's Windows AppUserModelID")
     path.write_text(text, encoding="utf-8")
@@ -928,6 +964,16 @@ def _is_26908(extracted: Path) -> bool:
     return package.is_file() and json.loads(package.read_text(encoding="utf-8")).get("version") == "26.908.40834"
 
 
+def _is_26911(extracted: Path) -> bool:
+    package = extracted / "package.json"
+    return package.is_file() and json.loads(package.read_text(encoding="utf-8")).get("version") == "26.911.61220"
+
+
+def _is_26915(extracted: Path) -> bool:
+    package = extracted / "package.json"
+    return package.is_file() and json.loads(package.read_text(encoding="utf-8")).get("version") == "26.915.31945"
+
+
 def _native_anchor(extracted: Path, value: str) -> str:
     if not _is_split_renderer(extracted):
         return value
@@ -939,6 +985,12 @@ def _native_anchor(extracted: Path, value: str) -> str:
     if _is_26908(extracted):
         mapping = {"oY": "GQ", "sY": "KQ", "jq": "gZ", "Oq": "pZ",
                    "Fy": "Bb", "yJ": "iQ", "bJ": "aQ", "Mq": "_Z"}
+    if _is_26911(extracted):
+        mapping = {"oY": "V$", "sY": "H$", "jq": "fQ", "Oq": "lQ",
+                   "Fy": "Kb", "yJ": "e$", "bJ": "t$", "Mq": "pQ", "i": "s", "r": "o"}
+    if _is_26915(extracted):
+        mapping = {"oY": "V2", "sY": "H2", "jq": "f0", "Oq": "l0",
+                   "Fy": "qS", "yJ": "e2", "bJ": "t2", "Mq": "p0", "i": "s", "r": "o"}
     return re.sub(r"[A-Za-z_$][\w$]*", lambda m: mapping.get(m[0], m[0]), value)
 
 
@@ -954,7 +1006,13 @@ def patch_windows_runtime_paths(extracted: Path) -> None:
         runtime_name = "uL"
     if _is_26908(extracted):
         runtime_name = "kL"
+    if _is_26911(extracted):
+        runtime_name = "pR"
+        runtime_anchor = runtime_anchor.replace("(0,i.join)", "(0,s.join)").replace("(0,r.homedir)", "(0,o.homedir)")
     runtime_anchor = runtime_anchor.replace("function fF(", f"function {runtime_name}(")
+    if _is_26915(extracted):
+        runtime_anchor = "function sY(e){let t=process.env.LOCALAPPDATA??(0,s.join)((0,o.homedir)(),`AppData`,`Local`);return(0,s.join)(t,...e)}"
+        runtime_name = "sY"
     matches = [path for path in source_files if runtime_anchor in path.read_text(encoding="utf-8")]
     if len(matches) != 1:
         raise RuntimeError(f"expected one bundled-runtime cache root anchor, found {len(matches)}")
@@ -969,9 +1027,23 @@ def patch_windows_runtime_paths(extracted: Path) -> None:
         "(0,i.join)((0,r.homedir)(),`AppData`,`Local`),...e)}"
     )
     runtime_replacement = runtime_replacement.replace("function fF(", f"function {runtime_name}(")
+    if _is_26911(extracted) or _is_26915(extracted):
+        runtime_replacement = runtime_replacement.replace("(0,i.join)", "(0,s.join)").replace("(0,r.homedir)", "(0,o.homedir)")
     text = replace_unique(text, runtime_anchor, runtime_replacement, "runtime cache isolation")
     path.write_text(text, encoding="utf-8")
 
+    if _is_26915(extracted):
+        # Upstream inlined the logger into bootstrap and renamed worker bindings.
+        for pattern, alias in (("bootstrap-*.js", "u"), ("worker.js", "h")):
+            paths = list(build.glob(pattern))
+            if len(paths) != 1:
+                raise RuntimeError(f"expected one 26.915 logger: {pattern}")
+            logger_path = paths[0]
+            logger = logger_path.read_text(encoding="utf-8")
+            old = f"if(t===`win32`){{let e=n.LOCALAPPDATA??(0,{alias}.join)(r,`AppData`,`Local`);return(0,{alias}.join)(e,`Codex`,`Logs`)}}"
+            new = f"if(t===`win32`){{let e=n.LOCALAPPDATA??(0,{alias}.join)(r,`AppData`,`Local`);return(0,{alias}.join)(process.env.CODEX_MUX_HOME??e,process.env.CODEX_MUX_HOME?`logs`:`Codex Subscription Router/logs`)}}"
+            logger_path.write_text(replace_unique(logger, old, new, "26.915 log isolation"), encoding="utf-8")
+        return
     logger_path = next(iter(build.glob("file-based-logger-*.js")), None)
     if logger_path is None:
         raise RuntimeError("desktop file logger bundle was not found")
@@ -1026,6 +1098,8 @@ def patch_windows_native_messaging_isolation(extracted: Path) -> None:
         "`/d`,t,`/f`])}"
     )
     registry_add_anchor = remap(registry_add_anchor)
+    if _is_26915(extracted):
+        registry_add_anchor = registry_add_anchor.replace("process.platform!==`win32`||t==null||", "process.platform===`win32`&&t!=null&&")
     text = replace_unique(
         text,
         registry_add_anchor,
@@ -1105,7 +1179,7 @@ def verify_windows_integration_isolation(extracted: Path) -> None:
                 f"copied app contains a self-registering Explorer integration anchor: {candidate}"
             )
 
-    protocol_files = list((extracted / ".vite" / "build").glob("window-all-closed-*.js"))
+    protocol_files = list((extracted / ".vite" / "build").glob("bootstrap-*.js" if _is_26915(extracted) else "window-all-closed-*.js"))
     protocol_anchor = "if(process.platform===`win32`)return;"
     matches = [
         path
@@ -1141,6 +1215,12 @@ def patch_windows_appshots_gate(extracted: Path) -> None:
         # without overriding upstream feature availability or managed policy.
         bridge_anchor = "ie=y?g4e(g):null,U=new a4e"
         bridge_replacement = 'ie=y&&process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1"?g4e(g):null,U=new a4e'
+    if _is_26911(extracted):
+        bridge_anchor = "ae=v?M3e(h):null,oe=new x3e"
+        bridge_replacement = 'ae=v&&process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1"?M3e(h):null,oe=new x3e'
+    if _is_26915(extracted):
+        bridge_anchor = "ie=_?yit(m):null,H=new cit"
+        bridge_replacement = 'ie=_&&process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1"?yit(m):null,H=new cit'
     text = replace_unique(
         text,
         bridge_anchor,
@@ -1166,6 +1246,12 @@ def patch_windows_appshots_gate(extracted: Path) -> None:
     if _is_26908(extracted):
         feature_anchor = "F&&K.windowsCaptureNativeBridge==null&&(a.appshotsEnabled=!1),Ie.setDesktopFeatureAvailability(a);"
         feature_replacement = 'F&&(!(process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1")||K.windowsCaptureNativeBridge==null)&&(a.appshotsEnabled=!1),Ie.setDesktopFeatureAvailability(a);'
+    if _is_26911(extracted):
+        feature_anchor = "I&&W.windowsCaptureNativeBridge==null&&(a.appshotsEnabled=!1),ze.setDesktopFeatureAvailability(a);"
+        feature_replacement = 'I&&(!(process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1")||W.windowsCaptureNativeBridge==null)&&(a.appshotsEnabled=!1),ze.setDesktopFeatureAvailability(a);'
+    if _is_26915(extracted):
+        feature_anchor = "P&&U.windowsCaptureNativeBridge==null&&(a.appshotsEnabled=!1),K.setDesktopFeatureAvailability(a);"
+        feature_replacement = 'P&&(!(process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1")||U.windowsCaptureNativeBridge==null)&&(a.appshotsEnabled=!1),K.setDesktopFeatureAvailability(a);'
     text = replace_unique(
         text,
         feature_anchor,
@@ -1200,6 +1286,12 @@ def verify_windows_appshots_contract(extracted: Path) -> dict[str, object]:
     if _is_26908(extracted):
         required = ('ie=y&&' + strict_gate + '?g4e(g):null',
                     'F&&(!(' + strict_gate + ')||K.windowsCaptureNativeBridge==null)&&(a.appshotsEnabled=!1)')
+    if _is_26911(extracted):
+        required = ('ae=v&&' + strict_gate + '?M3e(h):null',
+                    'I&&(!(' + strict_gate + ')||W.windowsCaptureNativeBridge==null)&&(a.appshotsEnabled=!1)')
+    if _is_26915(extracted):
+        required = ('ie=_&&' + strict_gate + '?yit(m):null',
+                    'P&&(!(' + strict_gate + ')||U.windowsCaptureNativeBridge==null)&&(a.appshotsEnabled=!1)')
     for marker in required:
         if marker not in text:
             raise RuntimeError(f"Appshots opt-in contract is missing {marker!r}")
@@ -1248,7 +1340,9 @@ def _prepare_account_component(token: str, control_port: int) -> str:
 def patch_windows_renderer(extracted: Path, token: str, control_port: int) -> None:
     if _is_split_renderer(extracted):
         import importlib.util
-        renderer_module = "windows_renderer_26903" if _is_26903(extracted) or _is_26908(extracted) else "windows_renderer_26901"
+        renderer_module = "windows_renderer_26903" if _is_26903(extracted) or _is_26908(extracted) or _is_26911(extracted) else "windows_renderer_26901"
+        if _is_26915(extracted):
+            renderer_module = "windows_renderer_26915"
         spec = importlib.util.spec_from_file_location(
             renderer_module, PROJECT_ROOT / "scripts" / f"{renderer_module}.py"
         )
@@ -1564,6 +1658,8 @@ def rebind_desktop_integrity(staged_app: Path, source_app: Path) -> dict[str, ob
         # unchanged upstream fuse wire 0109313031313030303131.
         "49e7e8f5db0a4c8a12a666b70dac40e0e88a1873d02e8aafb82c3e8cabeca49c": "633aa9957e5f0fdad1765be82afea60c414714b8c4ca72143ee9e064951f14f8",
         "ca98461fd573f8b9912f48080b0f40f3b44788d1074493f4285e68169503fc23": "eff6dbe82270819bc196360ee616cb6c324544dd8266dec46ac8e25d330d60db",
+        "f28e7d55de4ee465747e252741218bf5a58c33620d014598e01bddb9189abaca": "2f43617a6e7dbdf2d784212cb1b98bebda0a6e9afb583d14d9c9bafd37b78a31",
+        "0d27aef4010466bd8d2a95f6483938cfdb8926f6668ecc1182facec9b85b75d2": "e60c43295545cce24a4cfd65b2ba831cdcdc173cbb705cc2b71326a981f51a67",
     }
     desktop_hash = sha256_file(source_app / "ChatGPT.exe")
     if desktop_hash in signed_runtimes:
@@ -1846,7 +1942,7 @@ def patch_app(
             tree_file_hashes(staged_app / "resources" / "app.asar.unpacked").keys()
         )
         unpacked = repack_asar(asar, extracted, repacked, official_unpacked_files)
-        if source.asar_version in {"26.903.61454", "26.903.71938", "26.908.40834"}:
+        if source.asar_version in {"26.903.61454", "26.903.71938", "26.908.40834", "26.911.61220", "26.915.31945"}:
             node = shutil.which("node")
             if node is None:
                 raise RuntimeError("Node.js is required to verify native profile menu bindings")
