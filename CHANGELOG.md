@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Support Windows Codex `26.915.4065.0` (inner `26.915.31945`, build `9922`,
+  CLI `0.155.0-alpha.9.2`). Adapt the relocated initial-renderer account menu,
+  native reset modal and redesigned profile without removing native editing.
+  Update bootstrap/log isolation and disable the copied app's updater, including
+  its failure-recovery path. Preserve the explicit router CLI override, original
+  signed payloads, Computer Use `0.2.5`/Node `24.21.0`, and all routing semantics.
+  Qualify the packed native handlers using synthetic accounts and reset credits.
+- Support Windows Codex `26.911.7940.0` (inner `26.911.61220`, build `9647`,
+  CLI `0.155.0-alpha.2.6`) with exact source identity checks. Adapt the native
+  menu, usage/reset sheet, profile refresh, last-request panel, runtime cache
+  and Chrome native-host isolation to the new bundle. Preserve signed upstream
+  executables, routing semantics, auxiliary CUA and the opt-in Appshots gate.
+  Validate real packed native handlers with synthetic account/reset requests.
 - Replace unsupported Electron `window.prompt` renaming with an inline editor
   supporting Save, Cancel, validation, errors and duplicate-submit protection.
 - Resolve the usage/reset modal opener from the native profile button instead

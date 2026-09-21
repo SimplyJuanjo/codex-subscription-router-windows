@@ -7,7 +7,71 @@ publishing a destination if any expectation differs.
 
 ## Release 0.2.0
 
-### Current source checkout (September 9 update)
+### Current source checkout (September 21 update)
+
+Additional patch profile: `windows-26.915.4065.0-x64-r1`.
+
+| Component | Reviewed value |
+| --- | --- |
+| Official package | `OpenAI.Codex_26.915.4065.0_x64__2p2nqsd0c76g0` |
+| Internal desktop version/build | `26.915.31945` / `9922` |
+| Bundled CLI | `0.155.0-alpha.9.2` |
+| Original `app.asar` SHA-256 | `b8aeb817cd1ee6ef50efe8a97985d3be41de89688a5addfe0a444e1e52348096` |
+| Original `codex.exe` SHA-256 | `bc45017e8239dc150258f69309ced9df6bbcdf5b8e4f346decf780ac0999e226` |
+| Original `ChatGPT.exe` SHA-256 | `0d27aef4010466bd8d2a95f6483938cfdb8926f6668ecc1182facec9b85b75d2` |
+| Computer Use tree SHA-256 | `4acc27c77290487692fac3887db988ee853ead31d6c12f2b38cc25653664b79d` |
+| Computer Use Node/package | `24.21.0` / `0.2.5` |
+| Computer Use runtime | `0.0.16/20260915001755-492f19756c31` |
+
+The account menu and usage sheet moved into `app-initial`; this build uses a
+dedicated exact renderer profile. Rename, Usage, scoped reset reads/redemption,
+Auto/subscription choices, profile/plugin selectors and last-request attribution
+are exercised against the packed native bindings with synthetic HTTP responses.
+The redesigned native profile/editing UI is preserved alongside the account
+selector; the router scopes the legacy profile-data query, not public-profile
+editing. Protocol registration and logs now live in bootstrap. The copied updater
+is disabled at policy, startup and failure recovery; official Store updates remain
+untouched. The launcher retains its explicit `CODEX_CLI_PATH` mux override, which
+excludes the new app-contained-core selection path.
+
+Qualification: 114 Windows tests, 45 UI tests, 9 release tests, Go tests/vet,
+57 full build checks, syntax of all 9 changed bundles and isolated auxiliary
+app-server initialization without inference. Signed upstream executables and
+`chrome.dll` remain byte-identical, with no fuse changes. Real microphone/WebRTC,
+live Computer Use UI interaction and real reset redemption are not covered by
+these automated checks. Activation requires the existing router to exit first.
+
+### Previous source checkout (September 17 update)
+
+Additional patch profile: `windows-26.911.7940.0-x64-r1`.
+
+| Component | Reviewed value |
+| --- | --- |
+| Official package | `OpenAI.Codex_26.911.7940.0_x64__2p2nqsd0c76g0` |
+| Internal desktop version/build | `26.911.61220` / `9647` |
+| Bundled CLI | `0.155.0-alpha.2.6` |
+| Original `app.asar` SHA-256 | `74e7aaf2c112f84ef68a7846d10d1411403e72763f7e93fe046df2f264adf6e0` |
+| Original `codex.exe` SHA-256 | `be793ab45adbcbd9fa716df04cb6bc68eb9e353c6e6af20886af45c11abc2413` |
+| Original `ChatGPT.exe` SHA-256 | `f28e7d55de4ee465747e252741218bf5a58c33620d014598e01bddb9189abaca` |
+| Computer Use tree SHA-256 | `336fd5a7af792ccaa406f8c307057dc64b90198fe75208be888056ffe8d98959` |
+| Computer Use Node/package | `24.20.0` / `0.2.4` |
+
+The renderer profile follows the new native menu/modal exports and lazy
+initializers, reset-sheet header, profile query and task-summary layout.
+Packed-ASAR tests exercise Rename, Usage, account-scoped reset requests,
+expanded routing choices, profile/plugins and the latest-request display.
+Reset tests use synthetic HTTP responses; no real credits are redeemed.
+
+The main-process profile adapts runtime-cache paths and the two isolated native
+host state paths, with native-host registration/deletion disabled. Appshots stays
+opt-in and still requires upstream eligibility and the native bridge. Signed
+desktop/CLI/native payloads and `chrome.dll` are preserved byte-for-byte; no
+Electron fuse or integrity policy is changed. Automated qualification includes
+108 Windows tests, 45 UI tests, 9 release tests, Go tests/vet and an isolated
+auxiliary app-server initialization without inference. These checks do not claim
+a live microphone/WebRTC call or real reset redemption on this build.
+
+### Previous source checkout (September 9 update)
 
 Additional patch profile: `windows-26.903.8094.0-x64-r1`.
 

@@ -33,9 +33,9 @@ La versión más reciente revisada es:
 | Componente | Valor |
 | --- | --- |
 | Paquete | `OpenAI.Codex` |
-| Versión | `26.903.8094.0` |
+| Versión | `26.915.4065.0` |
 | Arquitectura | `x64` |
-| `app.asar` SHA-256 | `e75bae2b8a02f174c7ceeed6d631aaff355e44f8af5c798fa3628089f11d659e` |
+| `app.asar` SHA-256 | `b8aeb817cd1ee6ef50efe8a97985d3be41de89688a5addfe0a444e1e52348096` |
 
 También se conserva compatibilidad con `26.820.9563.0`. Los perfiles exactos
 están documentados en [COMPATIBILITY.md](COMPATIBILITY.md).
@@ -142,13 +142,13 @@ URI, las claves exactas y la desactivación compare-and-delete.
 ## Elegir la suscripción que se consume
 
 En el menú de perfil, abra **Routing mode**, debajo de **Usage remaining**.
-**Auto** mantiene el reparto inteligente. Al elegir una suscripción, incluida
-Primary, el router la prioriza en los chats nuevos y al cambiar de cuenta por
-agotamiento. Las conversaciones abiertas conservan su cuenta hasta necesitar
-ese cambio, para mantener el contexto.
+**Auto** recalcula el reparto para cada petición nueva, también en conversaciones
+existentes y subagentes, según capacidad y caducidad. Al elegir una suscripción,
+incluida Primary, las peticiones nuevas gastan exclusivamente de esa cuenta.
+El historial de la conversación no se cambia de propietario.
 
-Si la preferida se agota o se desconecta temporalmente, el router utiliza las
-demás automáticamente y conserva la preferencia para cuando se recupere.
+Si la elegida se agota o no está disponible, el modo manual se detiene sin gastar
+silenciosamente de otra cuenta. Puede elegir otra suscripción o volver a Auto.
 La selección se guarda inmediatamente, sin reiniciar la aplicación ni desactivar
 cuentas. Eliminar o deshabilitar manualmente la elegida devuelve el modo a Auto.
 
