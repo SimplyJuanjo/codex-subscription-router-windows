@@ -23,6 +23,11 @@ upstream between checking and sending. No automatic cross-account retry is made.
 
 - Native provider overrides disable WebSocket deltas and request/stream retries.
 - Full input, including opaque encrypted reasoning, is preserved byte-for-byte.
+- Inference and compaction requests accept up to 128 MiB of uncompressed JSON,
+  including base64 images in accumulated history. The former 32 MiB cap could
+  reject image-heavy tasks locally before any upstream request. Bodies exceeding
+  the limit return 413 before account selection, including unknown-length bodies;
+  other body-read failures return 400 without spending. Upstream limits still apply.
 - Server-side `previous_response_id` / `conversation` handles and background or
   compressed requests are rejected before spending; they need separate qualification.
 - Only Responses, compaction and fixed read-only model discovery endpoints exist.

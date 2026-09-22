@@ -17,6 +17,11 @@ import (
 	"time"
 )
 
+// Full-context requests include base64 images and tool results accumulated over
+// multiple turns. Keep a bounded allowance above the old 32 MiB cap;
+// the same limit applies to compaction so large histories can be compacted.
+const maxInferenceRequestBytes int64 = 128 << 20
+
 // Gateway is an HTTP inference boundary, not a general-purpose proxy. It
 // uses stateless HTTP requests with full input; WebSocket delta contexts are
 // rejected rather than charged to a different account without their history.
@@ -78,9 +83,18 @@ func (g *Gateway) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		gatewayError(w, 415, "compressed requests are not qualified")
 		return
 	}
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, 32<<20))
+	if r.ContentLength > maxInferenceRequestBytes {
+		gatewayError(w, http.StatusRequestEntityTooLarge, "inference request exceeds router limit of 128 MiB")
+		return
+	}
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxInferenceRequestBytes))
 	if err != nil {
-		gatewayError(w, 413, "inference request too large")
+		var sizeError *http.MaxBytesError
+		if errors.As(err, &sizeError) {
+			gatewayError(w, http.StatusRequestEntityTooLarge, "inference request exceeds router limit of 128 MiB")
+		} else {
+			gatewayError(w, http.StatusBadRequest, "cannot read inference request; inference not sent")
+		}
 		return
 	}
 	var envelope map[string]json.RawMessage

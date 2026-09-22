@@ -33,9 +33,9 @@ La versión más reciente revisada es:
 | Componente | Valor |
 | --- | --- |
 | Paquete | `OpenAI.Codex` |
-| Versión | `26.915.4065.0` |
+| Versión | `26.917.6896.0` |
 | Arquitectura | `x64` |
-| `app.asar` SHA-256 | `b8aeb817cd1ee6ef50efe8a97985d3be41de89688a5addfe0a444e1e52348096` |
+| `app.asar` SHA-256 | `00b7936388d11a3faede5fc736a8c6264eb66e1907bac4ef72c39b7399175d68` |
 
 También se conserva compatibilidad con `26.820.9563.0`. Los perfiles exactos
 están documentados en [COMPATIBILITY.md](COMPATIBILITY.md).

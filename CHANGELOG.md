@@ -7,6 +7,16 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ### Fixed
 
+- Support Windows Codex `26.917.6896.0` (inner `26.917.51856`, build `10492`,
+  CLI `0.155.0-alpha.16`).
+  Adapt the renamed native account menu, Usage/reset controls, profile and
+  latest-request panel while retaining explicit mux routing, isolated state,
+  signed upstream binaries, Computer Use payload and opt-in Appshots behavior.
+  Test account actions using synthetic identities and credits only.
+- Allow image-heavy inference and compaction histories up to 128 MiB at the
+  local spending gateway instead of rejecting them at 32 MiB. Preserve request
+  bytes and selected identity; reject oversized bodies before spending and
+  distinguish interrupted uploads from size-limit errors.
 - Support Windows Codex `26.915.4065.0` (inner `26.915.31945`, build `9922`,
   CLI `0.155.0-alpha.9.2`). Adapt the relocated initial-renderer account menu,
   native reset modal and redesigned profile without removing native editing.
