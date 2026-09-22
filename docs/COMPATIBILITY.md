@@ -7,7 +7,33 @@ publishing a destination if any expectation differs.
 
 ## Release 0.2.0
 
-### Current source checkout (September 21 update)
+### Current source checkout (September 22 update)
+
+Additional patch profile: `windows-26.917.6896.0-x64-r1`.
+
+| Component | Reviewed value |
+| --- | --- |
+| Official package | `OpenAI.Codex_26.917.6896.0_x64__2p2nqsd0c76g0` |
+| Internal desktop version/build | `26.917.51856` / `10492` |
+| Bundled CLI | `0.155.0-alpha.16` |
+| Original `app.asar` SHA-256 | `00b7936388d11a3faede5fc736a8c6264eb66e1907bac4ef72c39b7399175d68` |
+| Original `codex.exe` SHA-256 | `97d4d67419d0ac2f71342f9a5e850f9468aa622618de8ea823223edb9a91926a` |
+| Original `ChatGPT.exe` SHA-256 | `03e193b8beff46f155272af70fedaa6b1404b7eb9c8f8ff13efb8f1b046a0b34` |
+| Computer Use tree SHA-256 | `e312411601e65bd24cfb85434ae688eb5fa89470bb42625aa56de9ced6706087` |
+| Computer Use Node/package | `24.21.0` / `0.2.5` |
+| Computer Use runtime | `0.0.16/20260915001755-492f19756c31` |
+
+This exact profile adapts the renamed native account menu, Usage/reset controls,
+profile, plugins and latest-request task panel. It keeps the official signed
+executables and Computer Use payload byte-identical and checks Appshots remains
+opt-in. Automated tests use synthetic accounts and credits; they do not redeem
+real credits or establish a live voice/Computer Use session.
+Qualification on the reviewed local package: 118 Windows tests, 45 UI tests,
+9 release tests, Go tests/vet, 57 full-build checks, parse checks for all 9
+changed JavaScript bundles, and isolated auxiliary app-server initialization
+without inference. Activation still requires the running router to exit.
+
+### Previous source checkout (September 21 update)
 
 Additional patch profile: `windows-26.915.4065.0-x64-r1`.
 
