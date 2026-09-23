@@ -32,7 +32,7 @@ this project uses [Semantic Versioning](https://semver.org/).
   Validate real packed native handlers with synthetic account/reset requests.
 - Shorten the patcher staging directory prefix so copying the 26.908 payload
   no longer exceeds `MAX_PATH` under the default destination when Windows long
-  paths are disabled. Record two open launcher-bypass issues in
+  paths are disabled. Record open launcher-bypass and long-path issues in
   `docs/FIELD-REPORT-LAUNCHER-BYPASS.md`.
 - Replace unsupported Electron `window.prompt` renaming with an inline editor
   supporting Save, Cancel, validation, errors and duplicate-submit protection.
