@@ -79,8 +79,16 @@ Codex Subscription Router failed to start.
 The process has no package identity.
 ```
 
-Process command lines were not captured this time; the timing matches the
-sign-in relaunch described above. No log file was written for that attempt.
+The trigger was a Windows Update restart. `MoUsoCoreWorker.exe` rebooted the
+machine at 03:29 while the router and the Store app were open (System event
+1074, "service pack (planned)"), a second servicing reboot followed at 11:00,
+the user signed in at 11:03 and both apps reappeared at 11:06. Explorer's
+UserAssist history records no launch of either app that day, and `RestartApps`
+("restart apps when I sign back in") was `0`. That setting does not cover
+update reboots: a process registered with `RegisterApplicationRestart` is
+restarted after an update reboot unless it passed `RESTART_NO_REBOOT`, so users
+cannot opt out of this relaunch from Settings. Process command lines were not
+captured this time, and no log file was written for the failed attempt.
 Starting `ChatGPT.exe` afterwards worked normally, and its log shows
 `windows_core_runtime_launch_selected ... selectedRuntimeSource=bundled`.
 
