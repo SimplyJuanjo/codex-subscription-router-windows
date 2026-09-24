@@ -67,12 +67,62 @@ Possible directions, not evaluated:
 - Have the doctor script flag "router processes present, launcher absent,
   control port closed" as a named condition.
 
+### Update 2026-09-24: on the 26.917 build the bypass is fatal
+
+Router built from Store `26.917.6896.0` (bundle `26.917.51856`), installed from
+`070ef24`. About two minutes after sign-in, the router and the Store Codex app
+started within two seconds of each other, and the router showed a modal error
+instead of opening:
+
+```text
+Codex Subscription Router failed to start.
+The process has no package identity.
+```
+
+Process command lines were not captured this time; the timing matches the
+sign-in relaunch described above. No log file was written for that attempt.
+Starting `ChatGPT.exe` afterwards worked normally, and its log shows
+`windows_core_runtime_launch_selected ... selectedRuntimeSource=bundled`.
+
+The dialog comes from the bootstrap's catch-all handler
+(`${app.getName()} failed to start.`, with the error message as detail). The
+bootstrap decides whether it is running as the Store's app-contained core with
+a check equivalent to:
+
+```js
+process.platform === "win32" && app.isPackaged && process.resourcesPath != null
+  && !process.env.CODEX_CLI_PATH?.trim()
+  && packageJson.codexWindowsAppContainedCore === "1"
+```
+
+The patched `app.asar` still carries `"codexWindowsAppContainedCore": "1"` and
+`"codexWindowsPackageIdentity": "OpenAI.Codex"`. Under the launcher the check is
+false because the launcher sets `CODEX_CLI_PATH`. Without the launcher it is
+true, and the bootstrap then calls the native addon's
+`getCurrentPackageFamily()`, which needs a package identity the loose copy does
+not have. The message matches `APPMODEL_ERROR_NO_PACKAGE`. Which native call
+threw was inferred from the code, not traced.
+
+This is not the remote runtime-framework rollout: the
+`electron-windows-core-runtime-frameworks-enabled` and
+`electron-windows-primary-runtime-frameworks-enabled` flags in
+`~/.codex/.codex-global-state.json` were `false`.
+
+On 26.908 a bypassed start degraded to a working app without subscriptions; on
+26.917 it does not start at all, which raises the priority of this issue. One
+more direction, also not evaluated: have the patcher clear
+`codexWindowsAppContainedCore` in the patched `package.json`, so a bypassed
+start falls back to the bundled runtime instead of failing.
+
 ## 3. Open: the Start Menu shortcut is retargeted to `ChatGPT.real.exe`
 
 The installer wrote `Codex Subscription Router.lnk` with the launcher as target
 and the router AppUserModelID. On 2026-09-14 and again on 2026-09-15, after
 being repaired by hand, the shortcut's target had become `ChatGPT.real.exe`.
 The modification times fall a few minutes after a router instance started.
+It happened three more times: twice on 2026-09-21, and on 2026-09-23 about
+twenty minutes after `install_windows.ps1` had rewritten the shortcut with the
+correct target.
 
 - Desktop and taskbar-pinned shortcuts with the same target and AppUserModelID
   were not modified.
@@ -82,7 +132,8 @@ The modification times fall a few minutes after a router instance started.
   from native Chromium shortcut maintenance keyed on the AppUserModelID. This
   was not confirmed.
 
-Launching from the rewritten shortcut produces the same symptom as issue 2.
+Launching from the rewritten shortcut produces the same symptom as issue 2,
+which on the 26.917 build means the startup failure described in its update.
 
 ## 4. Open: ACL hardening fails under Windows PowerShell 5.1 on long paths
 
