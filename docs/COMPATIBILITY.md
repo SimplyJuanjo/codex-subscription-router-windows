@@ -7,7 +7,29 @@ publishing a destination if any expectation differs.
 
 ## Release 0.2.0
 
-### Current single-app recovery (2026-10-05)
+### Codex 26.1002 profile (2026-10-11)
+
+Exact patch profile: `windows-26.1002.7124.0-x64-r1`, same feature set as the
+26.930 single-app recovery below.
+
+| Component | Inspected candidate value |
+| --- | --- |
+| Official package | `OpenAI.Codex`, version `26.1002.7124.0`, `x64` |
+| Internal desktop version/build | `26.1002.52244` / `13536` |
+| Bundled Codex CLI | `0.162.0-alpha.2` |
+| Original `app.asar` SHA-256 | `76fe7078248c00e4e03dd2177a4275ec9ce158a9dd43452a4f0427d39a4ed012` |
+| OpenAI Authenticode signer thumbprint | `46AD9CEDA30C7DA1645830DF4AAAEDBD78E19E8D` |
+| Computer Use tree | 2,365 files / 251,216,888 bytes; SHA-256 `9b74f2e42381bd111954a75e58968e6034c92931a82e12a3f42791ffd46af9ac` |
+| Computer Use Node manifest / binary | `24.21.0-cua.1` / `24.21.0` |
+| Computer Use runtime | `0.0.29/20261003001300-807782c586fc` |
+| `@oai/cua` | `0.2.6` |
+
+The 26.930 native and renderer adapters carry over with renamed bindings. The
+packed-menu contract for this profile checks the injected menu, scoped resets
+and the rewritten reset modal by execution, and the native menu container and
+purchase guards by their exact patched markers.
+
+### Single-app recovery (2026-10-05)
 
 Exact patch profile: `windows-26.930.4958.0-x64-r1`, using the features of
 `c4eb2ea` rather than the later usage-calibration/shared-desktop branch.

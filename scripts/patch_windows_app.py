@@ -48,6 +48,22 @@ DEFAULT_STATE_ROOT = (
 # version/build are recorded separately because OpenAI currently ships them at
 # different version numbers.
 TESTED_SOURCE_BUILDS: dict[str, dict[str, str]] = {
+    "26.1002.7124.0": {
+        "asar_version": "26.1002.52244",
+        "asar_build": "13536",
+        "asar_sha256": "76fe7078248c00e4e03dd2177a4275ec9ce158a9dd43452a4f0427d39a4ed012",
+        "codex_sha256": "3553cd6e7df5a093d8cb8301cd8088a57e0971aba71ddbe0e67f7f44a15cdf68",
+        "chatgpt_sha256": "2b4898ac0915072107aac1bdd91e8784ca48a2ef9ead7a5c349c3f06cd9e6ee4",
+        "codex_launcher_sha256": "364ffeb4d2c3600e0cdf64c1c1fbf3645cd82eb33c793e7c0f8fce4545e94d30",
+        "windows_account_sha256": "62709cd96af5a51e8b0f64467fc540657d2e3ccfd10ff48060060edeb3488d6c",
+        "chrome_sha256": "80cbec95e543836564ea8c951b6ffafa9a7bc6cb54a32d094328b5f163291ac3",
+        "signer_thumbprint": "46AD9CEDA30C7DA1645830DF4AAAEDBD78E19E8D",
+        "cua_tree_sha256": "9b74f2e42381bd111954a75e58968e6034c92931a82e12a3f42791ffd46af9ac",
+        "cua_node_version": "24.21.0",
+        "cua_node_manifest_version": "24.21.0-cua.1",
+        "cua_runtime_version": "0.0.29/20261003001300-807782c586fc",
+        "cua_package_version": "0.2.6",
+    },
     "26.930.4958.0": {
         "asar_version": "26.930.41038",
         "asar_build": "13022",
@@ -983,7 +999,10 @@ def patch_windows_bootstrap(extracted: Path) -> None:
         r"await (?P<manager>[A-Za-z_$][\w$]*)\.initialize\(\);"
         r"(?=let\{runMainAppStartup:)"
     )
-    if _is_26930(extracted):
+    if _is_261002(extracted):
+        text = _native_261002().patch_updater(text)
+        count = 1
+    elif _is_26930(extracted):
         text = _native_26930().patch_updater(text)
         count = 1
     elif _is_26924(extracted):
@@ -1037,7 +1056,10 @@ def patch_windows_bootstrap(extracted: Path) -> None:
         r"process\.platform===`win32`&&(?P<electron>[A-Za-z_$][\w$]*)\.app\."
         r"setAppUserModelId\([^;]+\)"
     )
-    if _is_26930(extracted):
+    if _is_261002(extracted):
+        text = _native_261002().patch_app_id(text)
+        count = 1
+    elif _is_26930(extracted):
         text = _native_26930().patch_app_id(text)
         count = 1
     elif _is_26924(extracted):
@@ -1105,6 +1127,23 @@ def _is_26930(extracted: Path) -> bool:
     return package.is_file() and json.loads(package.read_text(encoding="utf-8")).get("version") == "26.930.41038"
 
 
+def _is_261002(extracted: Path) -> bool:
+    package = extracted / "package.json"
+    return package.is_file() and json.loads(package.read_text(encoding="utf-8")).get("version") == "26.1002.52244"
+
+
+def _native_261002():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "windows_native_261002", PROJECT_ROOT / "scripts" / "windows_native_261002.py"
+    )
+    if spec is None or spec.loader is None:
+        raise RuntimeError("could not load the 26.1002 native compatibility module")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 def _native_26930():
     import importlib.util
     spec = importlib.util.spec_from_file_location(
@@ -1144,6 +1183,9 @@ def _native_anchor(extracted: Path, value: str) -> str:
 
 
 def patch_windows_runtime_paths(extracted: Path) -> None:
+    if _is_261002(extracted):
+        _native_261002().patch_runtime_paths(extracted)
+        return
     if _is_26930(extracted):
         _native_26930().patch_runtime_paths(extracted)
         return
@@ -1281,6 +1323,9 @@ def patch_windows_runtime_paths(extracted: Path) -> None:
 
 
 def patch_windows_native_messaging_isolation(extracted: Path) -> None:
+    if _is_261002(extracted):
+        _native_261002().patch_native_messaging_isolation(extracted)
+        return
     if _is_26930(extracted):
         _native_26930().patch_native_messaging_isolation(extracted)
         return
@@ -1394,7 +1439,7 @@ def verify_windows_integration_isolation(extracted: Path) -> None:
                 f"copied app contains a self-registering Explorer integration anchor: {candidate}"
             )
 
-    protocol_files = list((extracted / ".vite" / "build").glob("bootstrap-*.js" if _is_26915(extracted) or _is_26917(extracted) or _is_26924(extracted) or _is_26930(extracted) else "window-all-closed-*.js"))
+    protocol_files = list((extracted / ".vite" / "build").glob("bootstrap-*.js" if _is_26915(extracted) or _is_26917(extracted) or _is_26924(extracted) or _is_26930(extracted) or _is_261002(extracted) else "window-all-closed-*.js"))
     protocol_anchor = "if(process.platform===`win32`)return;"
     matches = [
         path
@@ -1409,6 +1454,9 @@ def verify_windows_integration_isolation(extracted: Path) -> None:
 
 
 def patch_windows_appshots_gate(extracted: Path) -> None:
+    if _is_261002(extracted):
+        _native_261002().patch_appshots_gate(extracted)
+        return
     if _is_26930(extracted):
         _native_26930().patch_appshots_gate(extracted)
         return
@@ -1507,7 +1555,7 @@ def verify_windows_appshots_contract(extracted: Path) -> dict[str, object]:
     path = _require_regular_file(main_files[0], "Appshots desktop main bundle")
     text = _read_bounded_text(path, MAX_APPSHOTS_BUNDLE_BYTES, "Appshots desktop main bundle")
     strict_gate = 'process.env.CODEX_ROUTER_ENABLE_APPSHOTS==="1"'
-    expected_gate_count = 1 if _is_26924(extracted) or _is_26930(extracted) else 2
+    expected_gate_count = 1 if _is_26924(extracted) or _is_26930(extracted) or _is_261002(extracted) else 2
     if text.count(strict_gate) != expected_gate_count or text.count("CODEX_ROUTER_ENABLE_APPSHOTS") != expected_gate_count:
         raise RuntimeError(
             f"Appshots must have exactly {expected_gate_count} strict opt-in gate(s) for CODEX_ROUTER_ENABLE_APPSHOTS=1"
@@ -1538,6 +1586,8 @@ def verify_windows_appshots_contract(extracted: Path) -> dict[str, object]:
                     'He.setDesktopFeatureAvailability(i);',)
     if _is_26930(extracted):
         required = (_native_26930().APPSHOTS_PRIVATE,)
+    if _is_261002(extracted):
+        required = (_native_261002().APPSHOTS_PRIVATE,)
     for marker in required:
         if marker not in text:
             raise RuntimeError(f"Appshots opt-in contract is missing {marker!r}")
@@ -1595,6 +1645,8 @@ def patch_windows_renderer(extracted: Path, token: str, control_port: int) -> No
             renderer_module = "windows_renderer_26924"
         if _is_26930(extracted):
             renderer_module = "windows_renderer_26930"
+        if _is_261002(extracted):
+            renderer_module = "windows_renderer_261002"
         spec = importlib.util.spec_from_file_location(
             renderer_module, PROJECT_ROOT / "scripts" / f"{renderer_module}.py"
         )
@@ -2220,7 +2272,7 @@ def patch_app(
             node, str(PROJECT_ROOT / "scripts/check_patched_asar.cjs"),
             str(source.app_root / "resources" / "app.asar"), str(repacked),
         ])
-        if source.asar_version in {"26.903.61454", "26.903.71938", "26.908.40834", "26.911.61220", "26.915.31945", "26.917.51856", "26.924.22138", "26.930.41038"}:
+        if source.asar_version in {"26.903.61454", "26.903.71938", "26.908.40834", "26.911.61220", "26.915.31945", "26.917.51856", "26.924.22138", "26.930.41038", "26.1002.52244"}:
             print("Verifying the packed profile menu and expanded routing selector…")
             run([node, str(PROJECT_ROOT / "tests/windows/profile-menu-render.cjs"), str(repacked)])
         install_repacked_asar(staged_app, repacked, unpacked)

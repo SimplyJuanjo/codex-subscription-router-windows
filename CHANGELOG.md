@@ -5,6 +5,20 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Codex 26.1002
+
+- Add an exact profile for Windows Codex `26.1002.7124.0` (ASAR
+  `26.1002.52244`, build `13536`, CLI `0.162.0-alpha.2`; original ASAR
+  SHA-256 `76fe7078248c00e4e03dd2177a4275ec9ce158a9dd43452a4f0427d39a4ed012`).
+  `windows_native_261002.py` and `windows_renderer_261002.py` follow the 26.930
+  modules with the new minifier bindings; the feature set is unchanged.
+- In the thread panel, the section that followed background agents in 26.930 is
+  gone, so the last-request section now sits directly after background agents.
+- Computer Use moves to `@oai/cua` `0.2.6`, runtime
+  `0.0.29/20261003001300-807782c586fc` (2,365 files / 251,216,888 bytes; tree
+  SHA-256 `9b74f2e42381bd111954a75e58968e6034c92931a82e12a3f42791ffd46af9ac`).
+  Static payload evidence only.
+
 ### Single-app recovery and Codex 26.930
 
 - Restore the `c4eb2ea` feature set and adapt the exact installed Windows source
