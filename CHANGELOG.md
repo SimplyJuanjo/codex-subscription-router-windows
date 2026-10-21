@@ -5,6 +5,32 @@ this project uses [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Codex 26.1013
+
+- Add an exact profile for Windows Codex `26.1013.4894.0` (ASAR
+  `26.1013.40934`, build `20770`, CLI `0.163.0-alpha.10.2`; original ASAR
+  SHA-256 `bbec1d64e135b718a154b31655bb8ad9a39472bac1b2cabba991a9d97a339dd8`).
+  `windows_native_261013.py` and `windows_renderer_261013.py` follow the
+  26.1007 modules with the new minifier bindings.
+- The desktop log root moved from `bootstrap-*.js` into a new
+  `file-based-logger-*.js` chunk, and `AppServerRequestClient` moved from
+  `app-shared` into `app-initial`; both anchors follow their code.
+- Support composer predictions ("Press Tab to accept"). Two changes ship
+  together. First, the mux leaves prediction forks (`experimentalPredictionMode`)
+  unbound, because upstream rejects any override there. Second, the 26.1013
+  prediction eligibility check also accepts the router's `codex_router_spend`
+  provider. The statsig gate, setting, `/wham/predictions/config`, sample rate,
+  safety policy and app-server version check (`0.162.0-alpha.20` or later) stay
+  upstream.
+- OpenAI signs this build with a new Authenticode certificate (thumbprint
+  `8C1BBD222297A3669B63F95B42710343619559BB`). The earlier `26.1013.3656.0`
+  Store build (ASAR `26.1013.31256`) had identical native bundles and was
+  replaced within days, so it has no profile of its own.
+- Computer Use runtime `0.0.30/20261014203459-0849368674e2` (2,369 files /
+  252,264,432 bytes; tree SHA-256
+  `fa0efd31b8fc058004db0a30bbc0e94825e45a8f1b86578a50e3cb546a875299`). Static
+  payload evidence only.
+
 ### Codex 26.1007
 
 - Add an exact profile for Windows Codex `26.1007.2314.0` (ASAR

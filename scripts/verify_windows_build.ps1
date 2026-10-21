@@ -1371,6 +1371,15 @@ function Test-AsarArchive {
         # the native-host guard, or accept a partially upgraded payload.
         $isolationProfiles = @(
             @{
+                Name = '26.1013'
+                Markers = @(
+                    'async function wU(e){return}',
+                    'async function TU(e){return}',
+                    'function LH(e){if(process.platform===`win32`)return process.env.CODEX_MUX_HOME?[(0,h.join)(process.env.CODEX_MUX_HOME,XV)]:[];',
+                    'case`win32`:return(0,h.join)(process.env.CODEX_MUX_HOME??(0,h.join)(process.env.LOCALAPPDATA??(0,h.join)(g.default.homedir(),`AppData`,`Local`),`Codex Subscription Router`),XV);'
+                )
+            },
+            @{
                 Name = '26.1007'
                 Markers = @(
                     'async function _U(e){return}',
@@ -1487,6 +1496,11 @@ function Test-AsarArchive {
         }
 
         $activeOfficialAnchors = @(
+            'async function wU(e){if(process.platform!==`win32`)return;',
+            'async function TU(e){let t=e.manifestPath;process.platform===`win32`',
+            'case`win32`:return n.jr(`windows`).map',
+            'function LH(e){let t=RH();return[...t==null?[]:[t],(0,h.join)(e.codexHome,XV)]',
+            'case`win32`:return(0,h.join)(process.env.LOCALAPPDATA??(0,h.join)(g.default.homedir(),`AppData`,`Local`),`OpenAI`,`Codex`,XV);',
             'async function _U(e){if(process.platform!==`win32`)return;',
             'async function vU(e){let t=e.manifestPath;process.platform===`win32`',
             'case`win32`:return n.Ar(`windows`).map',
